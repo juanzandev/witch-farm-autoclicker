@@ -39,24 +39,6 @@ It attacks, periodically looks away, holds right click to eat, and then returns 
 - Taskbar-aware behavior for Windows
 - Persistent config and logs in AppData
 
-## Recommended Farm Setups
-
-These presets are based on common farm families discussed in Minecraft Wiki tutorials and community build patterns. Start with these values, then fine-tune based on your TPS, ping, and armor/food setup.
-
-| Farm Type | Suggested Attack Interval | Eat Every | Eat Duration | Look Away Pixels | Recommended Notes |
-| --- | --- | --- | --- | --- | --- |
-| Witch Hut Farm (manual kill bay) | `0.72s` to `0.80s` | `120s` | `3.0s` | `420` to `520` | Balanced default. Good for long sessions and stable drop processing. |
-| Raid Farm Manual Chamber (JE sword finish) | `0.60s` to `0.75s` | `90s` | `3.0s` to `3.5s` | `500` to `650` | Faster click profile for wave pressure and cleanup cadence. |
-| Guardian Manual Finisher Area | `0.65s` to `0.78s` | `75s` to `90s` | `3.0s` to `4.0s` | `550` to `700` | More frequent eating helps sustain long fights and chip damage scenarios. |
-| General Mob Tower XP Finisher | `0.75s` to `0.90s` | `120s` to `150s` | `2.5s` to `3.0s` | `350` to `500` | Safer, relaxed profile for mixed-mob funnels. |
-| Zombified Piglin or Zombie Melee Chute | `0.68s` to `0.80s` | `90s` to `120s` | `3.0s` | `450` to `600` | Strong baseline where constant melee cadence is preferred for kill credit. |
-
-### Quick Preset Rule
-
-- If mobs pile up: lower attack interval.
-- If food still runs out: decrease eat interval and/or increase eat duration.
-- If camera returns incorrectly: increase look-away pixels slightly.
-
 ## Trigger Key Setting
 
 Use the Toggle Key field in-app to choose your trigger key.
@@ -100,28 +82,18 @@ Output appears in `dist`.
 scripts\install_exe.bat
 ```
 
-## Reference Farm Sources (Internet)
+## Windows Security & Trusted Downloads
 
-Preset recommendations were informed by farm categories and mechanics from:
+To reduce Windows SmartScreen warnings for downloaded executables, this project follows these practices:
 
-- https://minecraft.wiki/w/Tutorial:Witch_farming
-- https://minecraft.wiki/w/Tutorial:Mob_farm
-- https://minecraft.wiki/w/Tutorial:Raid_farming
-- https://minecraft.wiki/w/Tutorial:Guardian_farming
-- https://minecraft.wiki/w/Witch
+- Publish SHA-256 checksum files for each downloadable build.
+- Move toward installer-based distribution (wizard-style setup) for cleaner install/update behavior.
+- Sign release binaries with an Authenticode code-signing certificate.
 
-## Make This Repo Shine On GitHub
+Important:
 
-Suggested repository metadata for your push:
-
-- Repo description: Minecraft armor-stand AFK autoclicker with auto-eat timing and Windows desktop UI.
-- Topics: `minecraft`, `autoclicker`, `python`, `windows`, `pyinstaller`, `gaming-tools`, `afk-farm`, `desktop-app`
-
-Recommended release structure:
-
-1. Tag first release as `v1.0.0`.
-2. Attach portable EXE built from this repo.
-3. Include one screenshot of the app UI in the release notes.
+- Unsigned EXEs can still trigger warning dialogs even when safe.
+- The strongest long-term fix is code signing + publisher reputation over time.
 
 ## Notes
 

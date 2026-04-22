@@ -57,6 +57,16 @@ body {
   image-rendering: pixelated;
 }
 
+.dev-tag {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dev-tag strong {
+  color: #9ae6b4;
+}
+
 nav a {
   color: var(--muted);
   text-decoration: none;
@@ -168,6 +178,14 @@ h1 {
 
 .panel-sub { color: var(--muted); }
 
+.trust-list {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: var(--text);
+}
+
+.trust-list li { margin-bottom: 8px; }
+
 .table-wrap { overflow-x: auto; }
 
 table {
@@ -200,6 +218,13 @@ th {
 .download .big { margin-top: 10px; }
 .tiny { color: var(--muted); font-size: 13px; }
 
+.checksum-link {
+  color: #9be7ff;
+  font-weight: 700;
+}
+
+.checksum-link:hover { color: #cbf5ff; }
+
 footer {
   text-align: center;
   color: var(--muted);
@@ -213,6 +238,8 @@ footer {
     flex-direction: column;
     gap: 10px;
   }
+
+  .dev-tag { order: 3; }
 
   nav a { margin: 0 8px; }
 

@@ -21,8 +21,9 @@
       <img src="assets/witch.png" alt="Witch icon" class="brand-icon" />
       <span>Witch Farm Autoclicker</span>
     </div>
+    <div class="dev-tag">Developer: <strong>@juanzandev</strong></div>
     <nav>
-      <a href="#presets">Presets</a>
+      <a href="#trust">Windows Trust</a>
       <a href="#download">Download</a>
       <a id="repo-link-nav" href="#" target="_blank" rel="noopener noreferrer">GitHub</a>
     </nav>
@@ -57,52 +58,16 @@
       </article>
     </section>
 
-    <section id="presets" class="panel" data-aos="fade-up">
-      <h2>Recommended Setup Profiles</h2>
-      <p class="panel-sub">Starting points for popular farm categories from Minecraft Wiki tutorials.</p>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Farm Type</th>
-              <th>Attack Interval</th>
-              <th>Eat Every</th>
-              <th>Eat Duration</th>
-              <th>Look Away</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Witch Hut Manual Bay</td>
-              <td>0.72s to 0.80s</td>
-              <td>120s</td>
-              <td>3.0s</td>
-              <td>420 to 520 px</td>
-            </tr>
-            <tr>
-              <td>Raid Farm Manual Chamber</td>
-              <td>0.60s to 0.75s</td>
-              <td>90s</td>
-              <td>3.0s to 3.5s</td>
-              <td>500 to 650 px</td>
-            </tr>
-            <tr>
-              <td>Guardian Manual Finisher</td>
-              <td>0.65s to 0.78s</td>
-              <td>75s to 90s</td>
-              <td>3.0s to 4.0s</td>
-              <td>550 to 700 px</td>
-            </tr>
-            <tr>
-              <td>General Mob Tower XP</td>
-              <td>0.75s to 0.90s</td>
-              <td>120s to 150s</td>
-              <td>2.5s to 3.0s</td>
-              <td>350 to 500 px</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <section id="trust" class="panel" data-aos="fade-up">
+      <h2>Windows Trust & Security</h2>
+      <p class="panel-sub">
+        This project is transitioning to signed releases and installer-based distribution to reduce SmartScreen warnings.
+      </p>
+      <ul class="trust-list">
+        <li>Future releases will be Authenticode-signed.</li>
+        <li>Installer wizard packaging will be available for cleaner install/update flows.</li>
+        <li>SHA-256 checksum is published with each downloadable build.</li>
+      </ul>
     </section>
 
     <section id="download" class="download" data-aos="zoom-in-up">
@@ -111,12 +76,13 @@
       <a class="btn btn-primary big" href="downloads/WitchFarmAutoClicker_latest.exe" download>
         Download WitchFarmAutoClicker_latest.exe
       </a>
+      <p><a class="checksum-link" href="downloads/WitchFarmAutoClicker_latest.exe.sha256" download>Download SHA-256 checksum</a></p>
       <p class="tiny">If browser blocks download, right click and save link as.</p>
     </section>
   </main>
 
   <footer>
-    <p>Witch Farm Autoclicker • Initial release, with updates planned based on community support.</p>
+    <p>Witch Farm Autoclicker • Built by @juanzandev • Initial release, with updates planned based on community support.</p>
   </footer>
 
   <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
