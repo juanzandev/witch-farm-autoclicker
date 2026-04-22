@@ -85,7 +85,8 @@ class App:
             value=str(self.config.eat_duration))
         self.look_away_var = tk.StringVar(
             value=str(self.config.look_away_pixels))
-        self.look_direction_var = tk.StringVar(value=self.config.look_direction)
+        self.look_direction_var = tk.StringVar(
+            value=self.config.look_direction)
         self.hotkey_var = tk.StringVar(value=self.config.hotkey)
 
         self._build_ui()
@@ -514,7 +515,8 @@ class App:
             eat_duration=float(self.eat_duration_var.get().strip()),
             look_away_pixels=int(float(self.look_away_var.get().strip())),
             look_away_settle_time=self.config.look_away_settle_time,
-            look_direction=self._validate_direction(self.look_direction_var.get()),
+            look_direction=self._validate_direction(
+                self.look_direction_var.get()),
             hotkey=self._validate_hotkey(self.hotkey_var.get()),
         )
 

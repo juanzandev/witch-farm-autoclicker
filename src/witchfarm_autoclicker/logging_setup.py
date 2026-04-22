@@ -13,7 +13,8 @@ def configure_logging(log_dir: Path) -> None:
         level=logging.INFO,
         format="%(asctime)s | %(levelname)s | %(message)s",
         handlers=[
-            RotatingFileHandler(log_file, maxBytes=1_000_000, backupCount=3, encoding="utf-8"),
+            RotatingFileHandler(log_file, maxBytes=1_000_000,
+                                backupCount=3, encoding="utf-8"),
             logging.StreamHandler(),
         ],
     )
