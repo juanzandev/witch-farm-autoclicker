@@ -15,6 +15,8 @@ from .paths import get_icon_path
 
 class App:
     FALLBACK_HOTKEY = keyboard.Key.f8
+    APP_TITLE = "Farm Control"
+    DEVELOPER_TAG = "@juanzandev"
 
     GWL_EXSTYLE = -20
     WS_EX_APPWINDOW = 0x00040000
@@ -61,7 +63,7 @@ class App:
 
     def __init__(self, config_manager: ConfigManager):
         self.root = tk.Tk()
-        self.root.title("Witch Farm Autoclicker")
+        self.root.title(self.APP_TITLE)
         self.root.geometry("640x760")
         self.root.minsize(620, 700)
         self.root.configure(bg="#101116")
@@ -72,6 +74,9 @@ class App:
         self.drag_offset_x = 0
         self.drag_offset_y = 0
         self._taskbar_style_initialized = False
+        self._status_pulse_job = None
+        self._status_pulse_on = False
+        self._minimize_restore_pending = False
 
         self.config_manager = config_manager
         self.clicker = WitchFarmClicker(self._append_log)
@@ -95,6 +100,7 @@ class App:
         self.root.overrideredirect(True)
         self.root.after(0, self._ensure_taskbar_presence)
         self.root.bind("<Map>", self._on_map)
+        self.root.bind("<Unmap>", self._on_unmap)
         self.root.bind("<FocusIn>", self._on_focus_in)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
@@ -111,23 +117,34 @@ class App:
     def _build_ui(self) -> None:
         titlebar = tk.Frame(
             self.root,
-            bg="#0C0E14",
-            height=34,
+            bg="#0B0D12",
+            height=40,
             highlightthickness=1,
-            highlightbackground="#2C3348",
+            highlightbackground="#273046",
         )
         titlebar.pack(fill="x", side="top")
         titlebar.pack_propagate(False)
 
         title_text = tk.Label(
             titlebar,
-            text="Witch Farm Autoclicker",
-            fg="#9EF59E",
-            bg="#0C0E14",
-            font=("Consolas", 10, "bold"),
-            padx=10,
+            text=self.APP_TITLE,
+            fg="#E9F4FF",
+            bg="#0B0D12",
+            font=("Consolas", 11, "bold"),
+            padx=12,
         )
         title_text.pack(side="left")
+
+        dev_chip = tk.Label(
+            titlebar,
+            text=f"Built by {self.DEVELOPER_TAG}",
+            fg="#9EF59E",
+            bg="#16201D",
+            font=("Consolas", 9, "bold"),
+            padx=10,
+            pady=2,
+        )
+        dev_chip.pack(side="left", padx=(8, 0), pady=7)
 
         close_btn = tk.Button(
             titlebar,
@@ -166,47 +183,91 @@ class App:
         title_text.bind("<ButtonPress-1>", self._start_window_drag)
         title_text.bind("<B1-Motion>", self._on_window_drag)
 
-        top = tk.Frame(self.root, bg="#101116", padx=20, pady=18)
-        top.pack(fill="x")
+        top = tk.Frame(self.root, bg="#101116")
+        top.pack(fill="x", padx=20, pady=18)
 
-        banner = tk.Frame(top, bg="#1B1F2A", height=120,
-                          highlightthickness=2, highlightbackground="#5CD65C")
+        banner = tk.Frame(
+            top,
+            bg="#141824",
+            height=152,
+            highlightthickness=1,
+            highlightbackground="#2F3750",
+        )
         banner.pack(fill="x")
         banner.pack_propagate(False)
 
-        tk.Label(
-            banner,
-            text="WITCH FARM CONTROL",
-            fg="#9EF59E",
-            bg="#1B1F2A",
-            font=("Consolas", 20, "bold"),
-        ).pack(pady=(18, 6))
+        banner_inner = tk.Frame(banner, bg="#141824")
+        banner_inner.pack(fill="both", expand=True, padx=18, pady=16)
 
         tk.Label(
-            banner,
-            text="Minecraft-themed macro panel",
-            fg="#A7AED1",
-            bg="#1B1F2A",
+            banner_inner,
+            text=self.APP_TITLE.upper(),
+            fg="#A9F6A9",
+            bg="#141824",
+            font=("Consolas", 22, "bold"),
+        ).pack(anchor="w", pady=(2, 6))
+
+        tk.Label(
+            banner_inner,
+            text="A cleaner control panel for AFK combat farms",
+            fg="#B4BCD8",
+            bg="#141824",
             font=("Consolas", 11),
-        ).pack()
+        ).pack(anchor="w")
+
+        info_row = tk.Frame(banner_inner, bg="#141824")
+        info_row.pack(fill="x", pady=(14, 0))
+
+        self._chip(info_row, "Windows-ready", "#22324B", "#D8E4FF").pack(side="left")
+        self._chip(info_row, self.DEVELOPER_TAG, "#16201D", "#9EF59E").pack(side="left", padx=(8, 0))
+        self._chip(info_row, "Press button or hotkey to toggle", "#1D2333", "#D4DAEE").pack(side="right")
+
+        status_wrap = tk.Frame(self.root, bg="#101116")
+        status_wrap.pack(fill="x", padx=20, pady=(12, 6))
+
+        status_bar = tk.Frame(
+            status_wrap,
+            bg="#151A24",
+            highlightthickness=1,
+            highlightbackground="#2B3448",
+        )
+        status_bar.pack(fill="x", padx=14, pady=10)
+
+        self.status_indicator = tk.Label(
+            status_bar,
+            text="●",
+            fg="#F8D26A",
+            bg="#151A24",
+            font=("Consolas", 13, "bold"),
+        )
+        self.status_indicator.pack(side="left")
 
         tk.Label(
-            self.root,
+            status_bar,
             textvariable=self.status_var,
-            fg="#F8D26A",
-            bg="#101116",
+            fg="#EAF0FF",
+            bg="#151A24",
             font=("Consolas", 13, "bold"),
-        ).pack(anchor="w", padx=22, pady=(8, 6))
+        ).pack(side="left", padx=(8, 0))
+
+        self.status_mode = tk.Label(
+            status_bar,
+            text="Idle",
+            fg="#B4BCD8",
+            bg="#1D2333",
+            font=("Consolas", 9, "bold"),
+            padx=10,
+            pady=2,
+        )
+        self.status_mode.pack(side="right")
 
         card = tk.Frame(
             self.root,
             bg="#171A24",
-            padx=16,
-            pady=14,
             highlightthickness=1,
             highlightbackground="#2C3348",
         )
-        card.pack(fill="x", padx=20)
+        card.pack(fill="x", padx=20, pady=(0, 14))
 
         self._build_input_row(card, "Attack Interval (sec)", self.attack_var)
         self._build_input_row(card, "Eat Every (sec)", self.eat_interval_var)
@@ -235,8 +296,8 @@ class App:
             pady=3,
         ).pack(side="right")
 
-        actions = tk.Frame(self.root, bg="#101116", pady=12)
-        actions.pack(fill="x", padx=20)
+        actions = tk.Frame(self.root, bg="#101116")
+        actions.pack(fill="x", padx=20, pady=12)
 
         self.apply_btn = self._pixel_button(
             actions, "Apply Settings", self.apply_settings, "#3A4260")
@@ -280,16 +341,25 @@ class App:
         self.log_box.configure(state="disabled")
 
         footer_row = tk.Frame(self.root, bg="#101116")
-        footer_row.pack(fill="x", padx=20, pady=(0, 10))
+        footer_row.pack(fill="x", padx=20, pady=(0, 12))
+        footer_divider = tk.Frame(footer_row, bg="#23293A", height=1)
+        footer_divider.pack(fill="x", pady=(0, 10))
+
+        footer_content = tk.Frame(footer_row, bg="#101116")
+        footer_content.pack(fill="x")
+
         tk.Label(
-            footer_row,
-            text="@juanzandev",
+            footer_content,
+            text="Farm Control launcher",
             fg="#7D85A8",
             bg="#101116",
             font=("Consolas", 10, "bold"),
-        ).pack(side="right")
+        ).pack(side="left")
+
+        self._chip(footer_content, f"Built by {self.DEVELOPER_TAG}", "#16201D", "#9EF59E").pack(side="right")
 
         self._append_log(f"Press {self._hotkey_hint()} to start/stop")
+        self._apply_status_ui(False)
 
     def _build_input_row(self, parent, label: str, var: tk.StringVar) -> None:
         row = tk.Frame(parent, bg="#171A24")
@@ -316,6 +386,17 @@ class App:
         )
         entry.pack(side="right")
 
+    def _chip(self, parent, text: str, bg: str, fg: str) -> tk.Label:
+        return tk.Label(
+            parent,
+            text=text,
+            fg=fg,
+            bg=bg,
+            font=("Consolas", 9, "bold"),
+            padx=10,
+            pady=3,
+        )
+
     def _build_direction_picker(self, parent) -> None:
         outer = tk.Frame(parent, bg="#171A24")
         outer.pack(fill="x", pady=(8, 6))
@@ -331,12 +412,10 @@ class App:
         grid = tk.Frame(
             outer,
             bg="#1A1E2A",
-            padx=8,
-            pady=8,
             highlightthickness=1,
             highlightbackground="#2C3348",
         )
-        grid.pack(anchor="w")
+        grid.pack(anchor="w", padx=8, pady=8)
 
         for row_index, row_values in enumerate(self.DIRECTION_GRID):
             for col_index, direction in enumerate(row_values):
@@ -375,7 +454,7 @@ class App:
         raise ValueError("Invalid look direction selected")
 
     def _pixel_button(self, parent, text, command, bg_color):
-        return tk.Button(
+        button = tk.Button(
             parent,
             text=text,
             command=command,
@@ -390,6 +469,11 @@ class App:
             pady=9,
             cursor="hand2",
         )
+        hover_bg = "#4C5A84" if bg_color != "#2B6E3E" else "#3D8753"
+        normal_bg = bg_color
+        button.bind("<Enter>", lambda _e: button.configure(bg=hover_bg))
+        button.bind("<Leave>", lambda _e: button.configure(bg=normal_bg))
+        return button
 
     def _start_hotkey_listener(self) -> None:
         def on_press(key):
@@ -444,6 +528,40 @@ class App:
             return f"{base}  (ON)"
         return base
 
+    def _apply_status_ui(self, running: bool) -> None:
+        if running:
+            self.status_var.set("Status: ON")
+            self.status_indicator.configure(fg="#89F28B")
+            self.status_mode.configure(text="Active", bg="#23402A", fg="#A7FFAD")
+            self._start_status_pulse()
+        else:
+            self.status_var.set("Status: OFF")
+            self.status_indicator.configure(fg="#F8D26A")
+            self.status_mode.configure(text="Idle", bg="#1D2333", fg="#B4BCD8")
+            self._stop_status_pulse()
+
+    def _start_status_pulse(self) -> None:
+        self._stop_status_pulse()
+
+        def pulse() -> None:
+            if self.clicker.running:
+                self._status_pulse_on = not self._status_pulse_on
+                color = "#89F28B" if self._status_pulse_on else "#53C85A"
+                self.status_indicator.configure(fg=color)
+                self._status_pulse_job = self.root.after(450, pulse)
+
+        self._status_pulse_on = False
+        self._status_pulse_job = self.root.after(250, pulse)
+
+    def _stop_status_pulse(self) -> None:
+        if self._status_pulse_job is not None:
+            try:
+                self.root.after_cancel(self._status_pulse_job)
+            except Exception:
+                pass
+            self._status_pulse_job = None
+        self._status_pulse_on = False
+
     def _start_window_drag(self, event) -> None:
         self.drag_offset_x = event.x_root - self.root.winfo_x()
         self.drag_offset_y = event.y_root - self.root.winfo_y()
@@ -454,8 +572,20 @@ class App:
         self.root.geometry(f"+{x}+{y}")
 
     def _minimize_window(self) -> None:
+        if self.root.state() == "iconic":
+            return
+
+        self._minimize_restore_pending = True
         self.root.overrideredirect(False)
-        self.root.after_idle(self.root.iconify)
+        self.root.update_idletasks()
+        self.root.iconify()
+        self.root.after(250, self._restore_borderless_after_minimize)
+
+    def _restore_borderless_after_minimize(self) -> None:
+        if self.root.state() != "iconic" and self._minimize_restore_pending:
+            self.root.overrideredirect(True)
+            self._ensure_taskbar_presence()
+            self._minimize_restore_pending = False
 
     def _ensure_taskbar_presence(self) -> None:
         if self._taskbar_style_initialized:
@@ -491,6 +621,11 @@ class App:
         if self.root.state() != "iconic":
             self.root.after(10, lambda: self.root.overrideredirect(True))
             self.root.after(20, self._ensure_taskbar_presence)
+            self._minimize_restore_pending = False
+
+    def _on_unmap(self, _event) -> None:
+        if self.root.state() == "iconic":
+            self._minimize_restore_pending = True
 
     def _on_focus_in(self, _event) -> None:
         if self.root.state() != "iconic" and not self.root.overrideredirect():
@@ -553,13 +688,10 @@ class App:
 
         is_on = self.clicker.toggle()
         if is_on:
-            self.status_var.set("Status: ON")
-            self.toggle_btn.configure(
-                bg="#7A2B2B", text=self._toggle_button_text(True))
+            self.toggle_btn.configure(bg="#7A2B2B", text=self._toggle_button_text(True))
         else:
-            self.status_var.set("Status: OFF")
-            self.toggle_btn.configure(
-                bg="#2B6E3E", text=self._toggle_button_text(False))
+            self.toggle_btn.configure(bg="#2B6E3E", text=self._toggle_button_text(False))
+        self._apply_status_ui(is_on)
 
     def _on_close(self) -> None:
         self.clicker.stop()
