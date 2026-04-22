@@ -4,7 +4,7 @@ AOS.init({
   offset: 80,
 });
 
-const REPO_URL = "https://github.com/YOUR_USERNAME/YOUR_REPOSITORY";
+const REPO_URL = "https://github.com/juanzandev/witch-farm-autoclicker";
 
 for (const id of ["repo-link-nav", "repo-link-hero"]) {
   const el = document.getElementById(id);

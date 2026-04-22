@@ -4,7 +4,7 @@
 
 ## Website
 
-Live project page: https://YOUR_USERNAME.github.io/YOUR_REPOSITORY/
+Live project page: https://juanzandev.github.io/witch-farm-autoclicker/
 
 Windows desktop autoclicker for Minecraft AFK combat farms where the player must keep hitting an armor stand while periodically eating.
 
