@@ -87,6 +87,19 @@ build_exe.bat
 
 Output appears in `dist`.
 
+### Build Full Release (Portable + Setup Wizard + SHA)
+
+```bat
+build_release.bat
+```
+
+This generates and publishes all release artifacts to `docs/downloads`:
+
+- `WitchFarmAutoClicker_latest.exe`
+- `WitchFarmAutoClicker_latest.exe.sha256`
+- `WitchFarmAutoClickerSetup_latest.exe`
+- `WitchFarmAutoClickerSetup_latest.exe.sha256`
+
 If you build manually, include the source path so the package is bundled correctly:
 
 ```bat
@@ -109,8 +122,9 @@ To reduce Windows SmartScreen warnings for downloaded executables, this project 
 
 Important:
 
-- Unsigned EXEs can still trigger warning dialogs even when safe.
-- The strongest long-term fix is code signing + publisher reputation over time.
+- Unsigned installers or EXEs can still trigger warning dialogs even when safe.
+- A setup wizard improves installation UX, but does not by itself remove SmartScreen warnings.
+- The strongest long-term fix is Authenticode code-signing + publisher reputation over time.
 
 ## Notes
 
