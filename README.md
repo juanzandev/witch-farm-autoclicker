@@ -112,6 +112,8 @@ py -m PyInstaller --noconfirm --onefile --windowed --clean --paths src --name Wi
 scripts\install_exe.bat
 ```
 
+After installation, launch the app from the Start Menu shortcut or from the installed path in `%LOCALAPPDATA%\Programs\WitchFarmAutoClicker`.
+
 ## Windows Security & Trusted Downloads
 
 To reduce Windows SmartScreen warnings for downloaded executables, this project follows these practices:
