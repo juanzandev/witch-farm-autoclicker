@@ -34,6 +34,8 @@ It attacks, periodically looks away, holds right click to eat, and then returns 
 - User-configurable global trigger key (plus fallback emergency key)
 - Adjustable attack interval and eat cycle timing
 - Automatic look-away and right-click eating routine
+- 3x3 direction grid (up/down/left/right + diagonals) for eat movement
+- Configurable movement units (pixels) applied in selected direction
 - Dark Minecraft-inspired desktop interface
 - Custom title bar with minimize and close controls
 - Taskbar-aware behavior for Windows
@@ -51,6 +53,15 @@ Supported values:
 Fallback key:
 
 - `F8` remains available as a backup toggle.
+
+## Required In-Game Setup
+
+To use the autoclicker correctly:
+
+- Put your sword in your main hand.
+- Put your food in your off hand (second hand).
+
+During each eat cycle, the app holds right click for the full Eat Duration and then returns your look movement back by the same amount.
 
 ## Fast Start
 
@@ -75,6 +86,12 @@ build_exe.bat
 ```
 
 Output appears in `dist`.
+
+If you build manually, include the source path so the package is bundled correctly:
+
+```bat
+py -m PyInstaller --noconfirm --onefile --windowed --clean --paths src --name WitchFarmAutoClicker --icon assets\witch.ico --add-data "assets;assets" autoclicker.py
+```
 
 ### Install EXE Locally
 

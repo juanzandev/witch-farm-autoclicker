@@ -12,6 +12,7 @@ class ClickerConfig:
     eat_duration: float = 3.0
     look_away_pixels: int = 450
     look_away_settle_time: float = 0.15
+    look_direction: str = "right"
     hotkey: str = "\\"
 
 
@@ -29,17 +30,25 @@ class ConfigManager:
             return ClickerConfig()
 
         cfg = ClickerConfig()
-        cfg.attack_interval = self._coerce_float(data.get("attack_interval"), cfg.attack_interval)
-        cfg.eat_interval = self._coerce_float(data.get("eat_interval"), cfg.eat_interval)
-        cfg.eat_duration = self._coerce_float(data.get("eat_duration"), cfg.eat_duration)
-        cfg.look_away_pixels = int(self._coerce_float(data.get("look_away_pixels"), cfg.look_away_pixels))
-        cfg.look_away_settle_time = self._coerce_float(data.get("look_away_settle_time"), cfg.look_away_settle_time)
+        cfg.attack_interval = self._coerce_float(
+            data.get("attack_interval"), cfg.attack_interval)
+        cfg.eat_interval = self._coerce_float(
+            data.get("eat_interval"), cfg.eat_interval)
+        cfg.eat_duration = self._coerce_float(
+            data.get("eat_duration"), cfg.eat_duration)
+        cfg.look_away_pixels = int(self._coerce_float(
+            data.get("look_away_pixels"), cfg.look_away_pixels))
+        cfg.look_away_settle_time = self._coerce_float(
+            data.get("look_away_settle_time"), cfg.look_away_settle_time)
+        cfg.look_direction = self._coerce_str(
+            data.get("look_direction"), cfg.look_direction)
         cfg.hotkey = self._coerce_str(data.get("hotkey"), cfg.hotkey)
         return cfg
 
     def save(self, cfg: ClickerConfig) -> None:
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
-        self.config_path.write_text(json.dumps(asdict(cfg), indent=2), encoding="utf-8")
+        self.config_path.write_text(json.dumps(
+            asdict(cfg), indent=2), encoding="utf-8")
 
     @staticmethod
     def _coerce_float(value, fallback: float) -> float:

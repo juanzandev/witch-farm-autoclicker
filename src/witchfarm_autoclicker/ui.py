@@ -42,12 +42,28 @@ class App:
         "enter": keyboard.Key.enter,
         "caps_lock": keyboard.Key.caps_lock,
     }
+    DIRECTION_GRID = [
+        ["up-left", "up", "up-right"],
+        ["left", "center", "right"],
+        ["down-left", "down", "down-right"],
+    ]
+    DIRECTION_LABELS = {
+        "up-left": "↖",
+        "up": "↑",
+        "up-right": "↗",
+        "left": "←",
+        "center": "•",
+        "right": "→",
+        "down-left": "↙",
+        "down": "↓",
+        "down-right": "↘",
+    }
 
     def __init__(self, config_manager: ConfigManager):
         self.root = tk.Tk()
         self.root.title("Witch Farm Autoclicker")
-        self.root.geometry("560x620")
-        self.root.minsize(520, 580)
+        self.root.geometry("640x760")
+        self.root.minsize(620, 700)
         self.root.configure(bg="#101116")
 
         self._set_icon()
@@ -63,9 +79,13 @@ class App:
 
         self.status_var = tk.StringVar(value="Status: OFF")
         self.attack_var = tk.StringVar(value=str(self.config.attack_interval))
-        self.eat_interval_var = tk.StringVar(value=str(int(self.config.eat_interval)))
-        self.eat_duration_var = tk.StringVar(value=str(self.config.eat_duration))
-        self.look_away_var = tk.StringVar(value=str(self.config.look_away_pixels))
+        self.eat_interval_var = tk.StringVar(
+            value=str(int(self.config.eat_interval)))
+        self.eat_duration_var = tk.StringVar(
+            value=str(self.config.eat_duration))
+        self.look_away_var = tk.StringVar(
+            value=str(self.config.look_away_pixels))
+        self.look_direction_var = tk.StringVar(value=self.config.look_direction)
         self.hotkey_var = tk.StringVar(value=self.config.hotkey)
 
         self._build_ui()
@@ -148,7 +168,8 @@ class App:
         top = tk.Frame(self.root, bg="#101116", padx=20, pady=18)
         top.pack(fill="x")
 
-        banner = tk.Frame(top, bg="#1B1F2A", height=120, highlightthickness=2, highlightbackground="#5CD65C")
+        banner = tk.Frame(top, bg="#1B1F2A", height=120,
+                          highlightthickness=2, highlightbackground="#5CD65C")
         banner.pack(fill="x")
         banner.pack_propagate(False)
 
@@ -188,8 +209,10 @@ class App:
 
         self._build_input_row(card, "Attack Interval (sec)", self.attack_var)
         self._build_input_row(card, "Eat Every (sec)", self.eat_interval_var)
-        self._build_input_row(card, "Eat Duration (sec)", self.eat_duration_var)
-        self._build_input_row(card, "Look Away Pixels", self.look_away_var)
+        self._build_input_row(card, "Eat Duration (sec)",
+                              self.eat_duration_var)
+        self._build_input_row(card, "Look Move Units (px)", self.look_away_var)
+        self._build_direction_picker(card)
         self._build_input_row(card, "Toggle Key", self.hotkey_var)
 
         hotkey_row = tk.Frame(card, bg="#171A24")
@@ -214,10 +237,12 @@ class App:
         actions = tk.Frame(self.root, bg="#101116", pady=12)
         actions.pack(fill="x", padx=20)
 
-        self.apply_btn = self._pixel_button(actions, "Apply Settings", self.apply_settings, "#3A4260")
+        self.apply_btn = self._pixel_button(
+            actions, "Apply Settings", self.apply_settings, "#3A4260")
         self.apply_btn.pack(side="left", padx=(0, 10))
 
-        self.toggle_btn = self._pixel_button(actions, self._toggle_button_text(False), self.toggle, "#2B6E3E")
+        self.toggle_btn = self._pixel_button(
+            actions, self._toggle_button_text(False), self.toggle, "#2B6E3E")
         self.toggle_btn.pack(side="left")
 
         log_wrap = tk.Frame(
@@ -253,6 +278,16 @@ class App:
         self.log_box.pack(fill="both", expand=True)
         self.log_box.configure(state="disabled")
 
+        footer_row = tk.Frame(self.root, bg="#101116")
+        footer_row.pack(fill="x", padx=20, pady=(0, 10))
+        tk.Label(
+            footer_row,
+            text="@juanzandev",
+            fg="#7D85A8",
+            bg="#101116",
+            font=("Consolas", 10, "bold"),
+        ).pack(side="right")
+
         self._append_log(f"Press {self._hotkey_hint()} to start/stop")
 
     def _build_input_row(self, parent, label: str, var: tk.StringVar) -> None:
@@ -279,6 +314,64 @@ class App:
             justify="center",
         )
         entry.pack(side="right")
+
+    def _build_direction_picker(self, parent) -> None:
+        outer = tk.Frame(parent, bg="#171A24")
+        outer.pack(fill="x", pady=(8, 6))
+
+        tk.Label(
+            outer,
+            text="Look Direction While Eating",
+            fg="#C8CCDD",
+            bg="#171A24",
+            font=("Consolas", 11, "bold"),
+        ).pack(anchor="w", pady=(0, 6))
+
+        grid = tk.Frame(
+            outer,
+            bg="#1A1E2A",
+            padx=8,
+            pady=8,
+            highlightthickness=1,
+            highlightbackground="#2C3348",
+        )
+        grid.pack(anchor="w")
+
+        for row_index, row_values in enumerate(self.DIRECTION_GRID):
+            for col_index, direction in enumerate(row_values):
+                rb = tk.Radiobutton(
+                    grid,
+                    text=self.DIRECTION_LABELS[direction],
+                    value=direction,
+                    variable=self.look_direction_var,
+                    indicatoron=False,
+                    width=4,
+                    height=1,
+                    command=self._on_direction_selected,
+                    bg="#252A39",
+                    fg="#E8EAF2",
+                    selectcolor="#2B6E3E",
+                    activebackground="#3A4260",
+                    activeforeground="#FFFFFF",
+                    relief="flat",
+                    bd=0,
+                    font=("Consolas", 11, "bold"),
+                    cursor="hand2",
+                )
+                rb.grid(row=row_index, column=col_index, padx=4, pady=4)
+
+        if self.look_direction_var.get() not in self.DIRECTION_LABELS:
+            self.look_direction_var.set("right")
+
+    def _on_direction_selected(self) -> None:
+        direction = self.look_direction_var.get()
+        self._append_log(f"Look direction: {direction}")
+
+    def _validate_direction(self, raw_value: str) -> str:
+        value = raw_value.strip().lower()
+        if value in self.DIRECTION_LABELS:
+            return value
+        raise ValueError("Invalid look direction selected")
 
     def _pixel_button(self, parent, text, command, bg_color):
         return tk.Button(
@@ -370,9 +463,12 @@ class App:
         if hasattr(ctypes, "windll"):
             try:
                 hwnd = ctypes.windll.user32.GetParent(self.root.winfo_id())
-                ex_style = ctypes.windll.user32.GetWindowLongW(hwnd, self.GWL_EXSTYLE)
-                ex_style = (ex_style & ~self.WS_EX_TOOLWINDOW) | self.WS_EX_APPWINDOW
-                ctypes.windll.user32.SetWindowLongW(hwnd, self.GWL_EXSTYLE, ex_style)
+                ex_style = ctypes.windll.user32.GetWindowLongW(
+                    hwnd, self.GWL_EXSTYLE)
+                ex_style = (
+                    ex_style & ~self.WS_EX_TOOLWINDOW) | self.WS_EX_APPWINDOW
+                ctypes.windll.user32.SetWindowLongW(
+                    hwnd, self.GWL_EXSTYLE, ex_style)
                 ctypes.windll.user32.SetWindowPos(
                     hwnd,
                     0,
@@ -418,6 +514,7 @@ class App:
             eat_duration=float(self.eat_duration_var.get().strip()),
             look_away_pixels=int(float(self.look_away_var.get().strip())),
             look_away_settle_time=self.config.look_away_settle_time,
+            look_direction=self._validate_direction(self.look_direction_var.get()),
             hotkey=self._validate_hotkey(self.hotkey_var.get()),
         )
 
@@ -427,6 +524,8 @@ class App:
             raise ValueError("Eat interval must be greater than 0")
         if cfg.eat_duration <= 0:
             raise ValueError("Eat duration must be greater than 0")
+        if cfg.look_away_pixels < 0:
+            raise ValueError("Look move units must be 0 or greater")
 
         return cfg
 
@@ -436,7 +535,8 @@ class App:
             self.hotkey_var.set(self.config.hotkey)
             self.clicker.update_config(self.config)
             self.config_manager.save(self.config)
-            self.toggle_btn.configure(text=self._toggle_button_text(self.clicker.running))
+            self.toggle_btn.configure(
+                text=self._toggle_button_text(self.clicker.running))
             if write_log:
                 self._append_log("Settings applied")
             return True
@@ -452,10 +552,12 @@ class App:
         is_on = self.clicker.toggle()
         if is_on:
             self.status_var.set("Status: ON")
-            self.toggle_btn.configure(bg="#7A2B2B", text=self._toggle_button_text(True))
+            self.toggle_btn.configure(
+                bg="#7A2B2B", text=self._toggle_button_text(True))
         else:
             self.status_var.set("Status: OFF")
-            self.toggle_btn.configure(bg="#2B6E3E", text=self._toggle_button_text(False))
+            self.toggle_btn.configure(
+                bg="#2B6E3E", text=self._toggle_button_text(False))
 
     def _on_close(self) -> None:
         self.clicker.stop()

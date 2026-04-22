@@ -11,6 +11,18 @@ from .config import ClickerConfig
 
 
 class WitchFarmClicker:
+    DIRECTION_VECTORS = {
+        "center": (0, 0),
+        "up-left": (-1, -1),
+        "up": (0, -1),
+        "up-right": (1, -1),
+        "left": (-1, 0),
+        "right": (1, 0),
+        "down-left": (-1, 1),
+        "down": (0, 1),
+        "down-right": (1, 1),
+    }
+
     def __init__(self, log_callback: Callable[[str], None]):
         self.mouse = Controller()
         self.log_callback = log_callback
@@ -33,7 +45,8 @@ class WitchFarmClicker:
             "Config updated: "
             f"attack {new_config.attack_interval:.2f}s, "
             f"eat every {new_config.eat_interval:.1f}s, "
-            f"eat {new_config.eat_duration:.1f}s"
+            f"eat {new_config.eat_duration:.1f}s, "
+            f"look {new_config.look_direction} {new_config.look_away_pixels}px"
         )
 
     def start(self) -> bool:
@@ -74,26 +87,31 @@ class WitchFarmClicker:
         self.mouse.release(Button.left)
 
     def _eat_cycle(self, cfg: ClickerConfig) -> None:
-        start_position = self.mouse.position
-        look_position = (start_position[0] + cfg.look_away_pixels, start_position[1])
+        direction = cfg.look_direction.strip().lower()
+        dx_unit, dy_unit = self.DIRECTION_VECTORS.get(direction, (1, 0))
+        delta_x = int(dx_unit * cfg.look_away_pixels)
+        delta_y = int(dy_unit * cfg.look_away_pixels)
+        moved = False
 
-        self.mouse.position = look_position
-        self._sleep_interruptible(cfg.look_away_settle_time)
-
-        self._log("Eating...")
-        self.mouse.press(Button.right)
-        start = time.monotonic()
         try:
+            if delta_x != 0 or delta_y != 0:
+                self.mouse.move(delta_x, delta_y)
+                moved = True
+                self._sleep_interruptible(cfg.look_away_settle_time)
+
+            self._log("Eating...")
+            self.mouse.press(Button.right)
+            start = time.monotonic()
             while not self._stop_event.is_set():
                 if time.monotonic() - start >= cfg.eat_duration:
                     break
                 self._sleep_interruptible(0.02)
         finally:
             self.mouse.release(Button.right)
-
-        self._sleep_interruptible(0.05)
-        self.mouse.position = start_position
-        self._log("Back to attack position")
+            self._sleep_interruptible(0.05)
+            if moved:
+                self.mouse.move(-delta_x, -delta_y)
+            self._log("Back to attack position")
 
     def _loop(self) -> None:
         next_eat = time.monotonic() + self.config.eat_interval
