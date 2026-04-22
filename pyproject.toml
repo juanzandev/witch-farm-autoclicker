@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "witchfarm-autoclicker"
+version = "1.0.0"
+description = "Minecraft witch farm helper autoclicker for Windows"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "pynput>=1.7.7",
+  "Pillow>=10.0.0"
+]
+
+[project.scripts]
+witchfarm-autoclicker = "witchfarm_autoclicker.main:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,220 @@
+:root {
+  --bg: #090b0f;
+  --bg2: #101522;
+  --card: #171d2e;
+  --text: #e9eefb;
+  --muted: #a4b0cc;
+  --accent: #4ade80;
+  --accent2: #22d3ee;
+  --border: #2b3550;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  color: var(--text);
+  background: radial-gradient(circle at 20% 0%, #151d2d 0%, var(--bg) 45%) no-repeat fixed;
+  font-family: Inter, Segoe UI, sans-serif;
+  overflow-x: hidden;
+}
+
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 28px;
+  background: rgba(8, 10, 15, 0.82);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: "Press Start 2P", monospace;
+  font-size: 11px;
+}
+
+.brand-icon {
+  width: 28px;
+  height: 28px;
+  image-rendering: pixelated;
+}
+
+nav a {
+  color: var(--muted);
+  text-decoration: none;
+  margin-left: 16px;
+  font-weight: 700;
+}
+
+nav a:hover { color: var(--text); }
+
+main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 30px 18px 80px;
+}
+
+.hero {
+  text-align: center;
+  padding: 52px 14px;
+}
+
+.chip {
+  display: inline-block;
+  margin: 0 0 14px;
+  border: 1px solid #3f4c75;
+  color: var(--accent2);
+  background: rgba(34, 211, 238, 0.1);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+h1, h2, h3 {
+  font-family: "Press Start 2P", monospace;
+  line-height: 1.35;
+}
+
+h1 {
+  font-size: clamp(24px, 4vw, 44px);
+  margin: 6px 0 18px;
+}
+
+.sub {
+  max-width: 760px;
+  margin: 0 auto;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.cta-row {
+  margin-top: 26px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-block;
+  text-decoration: none;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-weight: 800;
+  border: 1px solid transparent;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.34);
+}
+
+.btn-primary {
+  color: #05210f;
+  background: linear-gradient(90deg, #4ade80, #22c55e);
+}
+
+.btn-ghost {
+  color: var(--text);
+  border-color: #364361;
+  background: #172036;
+}
+
+.cards {
+  margin-top: 12px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.card {
+  background: linear-gradient(180deg, #1a2439 0%, #141d2e 100%);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.card h3 { font-size: 14px; margin-top: 0; }
+.card p { color: var(--muted); margin-bottom: 0; }
+
+.panel {
+  margin-top: 34px;
+  background: rgba(22, 28, 44, 0.88);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px;
+}
+
+.panel-sub { color: var(--muted); }
+
+.table-wrap { overflow-x: auto; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+th, td {
+  text-align: left;
+  border-bottom: 1px solid #2b3550;
+  padding: 12px;
+}
+
+th {
+  color: #8ce2ff;
+  font-size: 12px;
+  letter-spacing: 0.4px;
+}
+
+.download {
+  margin-top: 34px;
+  text-align: center;
+  padding: 30px 18px;
+  border-radius: 16px;
+  border: 1px solid #335463;
+  background: linear-gradient(160deg, rgba(14, 165, 233, .16), rgba(34, 197, 94, .12));
+}
+
+.download .big { margin-top: 10px; }
+.tiny { color: var(--muted); font-size: 13px; }
+
+footer {
+  text-align: center;
+  color: var(--muted);
+  padding: 26px 18px 42px;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    padding: 12px 14px;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  nav a { margin: 0 8px; }
+
+  .sub { font-size: 16px; }
+}

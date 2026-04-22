@@ -1,0 +1,29 @@
+# Python cache/artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual envs
+.venv/
+venv/
+
+# Build outputs
+build/
+dist/
+*.spec
+*.exe
+*.msi
+!docs/downloads/*.exe
+
+# Local runtime data
+*.log
+*.tmp
+*.bak
+
+# App runtime storage
+appdata/
+
+# IDE
+.vscode/
+.idea/
