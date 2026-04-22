@@ -218,9 +218,12 @@ class App:
         info_row = tk.Frame(banner_inner, bg="#141824")
         info_row.pack(fill="x", pady=(14, 0))
 
-        self._chip(info_row, "Windows-ready", "#22324B", "#D8E4FF").pack(side="left")
-        self._chip(info_row, self.DEVELOPER_TAG, "#16201D", "#9EF59E").pack(side="left", padx=(8, 0))
-        self._chip(info_row, "Press button or hotkey to toggle", "#1D2333", "#D4DAEE").pack(side="right")
+        self._chip(info_row, "Windows-ready", "#22324B",
+                   "#D8E4FF").pack(side="left")
+        self._chip(info_row, self.DEVELOPER_TAG, "#16201D",
+                   "#9EF59E").pack(side="left", padx=(8, 0))
+        self._chip(info_row, "Press button or hotkey to toggle",
+                   "#1D2333", "#D4DAEE").pack(side="right")
 
         status_wrap = tk.Frame(self.root, bg="#101116")
         status_wrap.pack(fill="x", padx=20, pady=(12, 6))
@@ -356,7 +359,8 @@ class App:
             font=("Consolas", 10, "bold"),
         ).pack(side="left")
 
-        self._chip(footer_content, f"Built by {self.DEVELOPER_TAG}", "#16201D", "#9EF59E").pack(side="right")
+        self._chip(footer_content, f"Built by {self.DEVELOPER_TAG}", "#16201D", "#9EF59E").pack(
+            side="right")
 
         self._append_log(f"Press {self._hotkey_hint()} to start/stop")
         self._apply_status_ui(False)
@@ -532,7 +536,8 @@ class App:
         if running:
             self.status_var.set("Status: ON")
             self.status_indicator.configure(fg="#89F28B")
-            self.status_mode.configure(text="Active", bg="#23402A", fg="#A7FFAD")
+            self.status_mode.configure(
+                text="Active", bg="#23402A", fg="#A7FFAD")
             self._start_status_pulse()
         else:
             self.status_var.set("Status: OFF")
@@ -688,9 +693,11 @@ class App:
 
         is_on = self.clicker.toggle()
         if is_on:
-            self.toggle_btn.configure(bg="#7A2B2B", text=self._toggle_button_text(True))
+            self.toggle_btn.configure(
+                bg="#7A2B2B", text=self._toggle_button_text(True))
         else:
-            self.toggle_btn.configure(bg="#2B6E3E", text=self._toggle_button_text(False))
+            self.toggle_btn.configure(
+                bg="#2B6E3E", text=self._toggle_button_text(False))
         self._apply_status_ui(is_on)
 
     def _on_close(self) -> None:
