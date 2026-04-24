@@ -1,0 +1,30 @@
+[
+  {
+    "version": "v1.0.1",
+    "date": "2026-04-24",
+    "title": "Major UX Iteration and UI Platform Upgrade",
+    "notes": [
+      "Added a dedicated website changelog tab with styled release cards rendered from changelog.json.",
+      "Added live recent-push visibility on the website by loading latest commits from the GitHub API.",
+      "Refined launcher UI organization with grouped sections, clearer status feedback, and better field styling.",
+      "Added runtime log quality-of-life features and stronger inline validation feedback.",
+      "Improved clicker/config robustness with safer worker shutdown, crash-safe click release handling, and atomic config saves.",
+      "Included test coverage for direction-vector mapping and config manager load/save coercion behavior.",
+      "Fixed taskbar visibility reliability so the launcher stays visible while open.",
+      "Migrated the desktop UI layer from Tkinter to PySide6 for improved flexibility and long-term cross-platform compatibility.",
+      "Added first-run onboarding, startup animation controls, light/dark themes, system tray restore/quit behavior, and upgraded hotkey capture with combo support.",
+      "Rebuilt the full launcher shell in Qt with custom borderless title bar, unified tab rendering, inline validation, startup animation, onboarding, and theme support.",
+      "Retained existing clicker/config core logic while preserving global hotkey toggle behavior and tray-based minimize/restore flow."
+    ]
+  },
+  {
+    "version": "v1.0.0",
+    "date": "2026-04-24",
+    "title": "Initial Public Release",
+    "notes": [
+      "Shipped configurable AFK combat automation with timed auto-eat behavior.",
+      "Added 3x3 look-direction picker and customizable hotkey with F8 fallback.",
+      "Published portable EXE, setup installer, and SHA-256 checksums."
+    ]
+  }
+]
