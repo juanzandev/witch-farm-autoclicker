@@ -1,710 +1,650 @@
 from __future__ import annotations
 
-import ctypes
 import logging
+import sys
 import time
-import tkinter as tk
-from tkinter import messagebox
 
 from pynput import keyboard
+from PySide6.QtCore import QObject, QPoint, Qt, QPropertyAnimation, Signal, QEasingCurve
+from PySide6.QtGui import QAction, QIcon
+from PySide6.QtWidgets import (
+    QApplication,
+    QButtonGroup,
+    QCheckBox,
+    QComboBox,
+    QFormLayout,
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QTabWidget,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+    QSystemTrayIcon,
+    QSizeGrip,
+    QGraphicsDropShadowEffect,
+    QGraphicsOpacityEffect,
+)
 
 from .clicker import WitchFarmClicker
 from .config import ClickerConfig, ConfigManager
 from .paths import get_icon_path
 
 
-class App:
+class _Bridge(QObject):
+    log_message = Signal(str)
+    toggle_request = Signal()
+
+
+class App(QMainWindow):
     FALLBACK_HOTKEY = keyboard.Key.f8
     APP_TITLE = "Farm Control"
     DEVELOPER_TAG = "@juanzandev"
-
-    GWL_EXSTYLE = -20
-    WS_EX_APPWINDOW = 0x00040000
-    WS_EX_TOOLWINDOW = 0x00000080
-    SWP_NOMOVE = 0x0002
-    SWP_NOSIZE = 0x0001
-    SWP_NOZORDER = 0x0004
-    SWP_FRAMECHANGED = 0x0020
     SPECIAL_HOTKEYS = {
-        "f1": keyboard.Key.f1,
-        "f2": keyboard.Key.f2,
-        "f3": keyboard.Key.f3,
-        "f4": keyboard.Key.f4,
-        "f5": keyboard.Key.f5,
-        "f6": keyboard.Key.f6,
-        "f7": keyboard.Key.f7,
-        "f8": keyboard.Key.f8,
-        "f9": keyboard.Key.f9,
-        "f10": keyboard.Key.f10,
-        "f11": keyboard.Key.f11,
-        "f12": keyboard.Key.f12,
-        "esc": keyboard.Key.esc,
-        "tab": keyboard.Key.tab,
-        "space": keyboard.Key.space,
-        "enter": keyboard.Key.enter,
-        "caps_lock": keyboard.Key.caps_lock,
+        "f1": keyboard.Key.f1, "f2": keyboard.Key.f2, "f3": keyboard.Key.f3, "f4": keyboard.Key.f4,
+        "f5": keyboard.Key.f5, "f6": keyboard.Key.f6, "f7": keyboard.Key.f7, "f8": keyboard.Key.f8,
+        "f9": keyboard.Key.f9, "f10": keyboard.Key.f10, "f11": keyboard.Key.f11, "f12": keyboard.Key.f12,
+        "esc": keyboard.Key.esc, "tab": keyboard.Key.tab, "space": keyboard.Key.space,
+        "enter": keyboard.Key.enter, "caps_lock": keyboard.Key.caps_lock,
     }
-    DIRECTION_GRID = [
-        ["up-left", "up", "up-right"],
-        ["left", "center", "right"],
-        ["down-left", "down", "down-right"],
-    ]
+    MODIFIER_KEYS = {
+        keyboard.Key.ctrl: "ctrl", keyboard.Key.ctrl_l: "ctrl", keyboard.Key.ctrl_r: "ctrl",
+        keyboard.Key.alt: "alt", keyboard.Key.alt_l: "alt", keyboard.Key.alt_r: "alt",
+        keyboard.Key.shift: "shift", keyboard.Key.shift_l: "shift", keyboard.Key.shift_r: "shift",
+    }
+    VK_MAIN_KEYS = {
+        220: "\\",   # OEM_5 (backslash/pipe on many layouts)
+        191: "/",
+        192: "`",
+        186: ";",
+        222: "'",
+        219: "[",
+        221: "]",
+        188: ",",
+        190: ".",
+        189: "-",
+        187: "=",
+    }
+    DIRECTION_GRID = [["up-left", "up", "up-right"], ["left", "center", "right"], ["down-left", "down", "down-right"]]
     DIRECTION_LABELS = {
-        "up-left": "↖",
-        "up": "↑",
-        "up-right": "↗",
-        "left": "←",
-        "center": "•",
-        "right": "→",
-        "down-left": "↙",
-        "down": "↓",
-        "down-right": "↘",
+        "up-left": "↖", "up": "↑", "up-right": "↗",
+        "left": "←", "center": "•", "right": "→",
+        "down-left": "↙", "down": "↓", "down-right": "↘",
     }
+
+    DARK_STYLE = """
+    QMainWindow, QWidget { background: transparent; color: #EAF0FF; font-family: "Segoe UI", "Inter", sans-serif; }
+    QFrame#TitleBar { background: #0B0D12; border-bottom: 1px solid #273046; }
+    QFrame#OuterShell { background: #101116; border: 1px solid #2C3348; border-radius: 16px; }
+    QFrame#Panel { background: #171A24; border: 1px solid #2C3348; border-radius: 10px; }
+    QPushButton { background: #2A334A; color: #EAF0FF; border: none; padding: 8px 12px; border-radius: 8px; }
+    QPushButton:hover { background: #3A4768; }
+    QPushButton:checked { background: #2B6E3E; color: #F3FFF4; border: 1px solid #74D98E; }
+    QLineEdit, QTextEdit, QComboBox { background: #1F2433; color: #EAF0FF; border: 1px solid #313C56; border-radius: 7px; padding: 6px; }
+    QTabWidget::pane { border: 1px solid #2C3348; border-radius: 10px; background: #171A24; top: -1px; }
+    QTabBar::tab { background: #1D2333; color: #AEB8D9; padding: 8px 14px; border-top-left-radius: 6px; border-top-right-radius: 6px; margin-right: 4px; }
+    QTabBar::tab:selected { background: #2B6E3E; color: #F3FFF4; }
+    """
+    LIGHT_STYLE = """
+    QMainWindow, QWidget { background: transparent; color: #1A2236; font-family: "Segoe UI", "Inter", sans-serif; }
+    QFrame#TitleBar { background: #E8EDF6; border-bottom: 1px solid #C7D2E8; }
+    QFrame#OuterShell { background: #F0F3F8; border: 1px solid #CED7EA; border-radius: 16px; }
+    QFrame#Panel { background: #FFFFFF; border: 1px solid #CED7EA; border-radius: 10px; }
+    QPushButton { background: #D6E0F2; color: #1A2236; border: none; padding: 8px 12px; border-radius: 8px; }
+    QPushButton:hover { background: #C3D0E8; }
+    QPushButton:checked { background: #4B86D8; color: #FFFFFF; border: 1px solid #2E68B8; }
+    QLineEdit, QTextEdit, QComboBox { background: #EEF3FC; color: #1A2236; border: 1px solid #CED7EA; border-radius: 7px; padding: 6px; }
+    QTabWidget::pane { border: 1px solid #CED7EA; border-radius: 10px; background: #FFFFFF; top: -1px; }
+    QTabBar::tab { background: #E5ECF8; color: #3C4A68; padding: 8px 14px; border-top-left-radius: 6px; border-top-right-radius: 6px; margin-right: 4px; }
+    QTabBar::tab:selected { background: #4B86D8; color: #FFFFFF; }
+    """
 
     def __init__(self, config_manager: ConfigManager):
-        self.root = tk.Tk()
-        self.root.title(self.APP_TITLE)
-        self.root.geometry("640x760")
-        self.root.minsize(620, 700)
-        self.root.configure(bg="#101116")
-
-        self._set_icon()
-
-        self.last_hotkey_time = 0.0
-        self.drag_offset_x = 0
-        self.drag_offset_y = 0
-        self._taskbar_style_initialized = False
-        self._status_pulse_job = None
-        self._status_pulse_on = False
-        self._minimize_restore_pending = False
-
+        self.qt_app = QApplication.instance() or QApplication(sys.argv)
+        super().__init__()
         self.config_manager = config_manager
-        self.clicker = WitchFarmClicker(self._append_log)
         self.config = self.config_manager.load()
+        self.first_run = not self.config_manager.config_path.exists()
+        self.clicker = WitchFarmClicker(self._queue_log)
+        self.bridge = _Bridge()
+        self.bridge.log_message.connect(self._append_log_ui)
+        self.bridge.toggle_request.connect(self.toggle)
+        self.last_hotkey_time = 0.0
+        self.capture_mode = False
+        self.pressed_modifiers: set[str] = set()
+        self.drag_origin: QPoint | None = None
+        self.startup_animation = bool(getattr(self.config, "startup_animation", True))
+        self.theme_name = getattr(self.config, "theme", "dark")
+        self.listener = None
+        self.tray_icon = None
+        self._tab_fade_anim = None
+        self._settings_flash_anim = None
 
-        self.status_var = tk.StringVar(value="Status: OFF")
-        self.attack_var = tk.StringVar(value=str(self.config.attack_interval))
-        self.eat_interval_var = tk.StringVar(
-            value=str(int(self.config.eat_interval)))
-        self.eat_duration_var = tk.StringVar(
-            value=str(self.config.eat_duration))
-        self.look_away_var = tk.StringVar(
-            value=str(self.config.look_away_pixels))
-        self.look_direction_var = tk.StringVar(
-            value=self.config.look_direction)
-        self.hotkey_var = tk.StringVar(value=self.config.hotkey)
-
+        self.setWindowTitle(self.APP_TITLE)
+        self.setWindowFlags(Qt.Window | Qt.FramelessWindowHint)
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setMinimumSize(640, 540)
+        self.resize(760, 620)
+        self._set_icon()
         self._build_ui()
+        self._apply_theme(self.theme_name)
         self._start_hotkey_listener()
-
-        self.root.overrideredirect(True)
-        self.root.after(0, self._ensure_taskbar_presence)
-        self.root.bind("<Map>", self._on_map)
-        self.root.bind("<Unmap>", self._on_unmap)
-        self.root.bind("<FocusIn>", self._on_focus_in)
-        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
-
-        self.apply_settings(show_error=True, write_log=False)
+        self.apply_settings(show_error=False, write_log=False)
+        self._apply_status_ui(False)
+        self.show()
+        if self.startup_animation:
+            self._play_startup_animation()
+        if self.first_run:
+            self._show_onboarding()
 
     def _set_icon(self) -> None:
         icon_path = get_icon_path()
         if icon_path.exists():
-            try:
-                self.root.iconbitmap(default=str(icon_path))
-            except Exception:
-                logging.exception("Failed to set window icon")
+            self.setWindowIcon(QIcon(str(icon_path)))
 
     def _build_ui(self) -> None:
-        titlebar = tk.Frame(
-            self.root,
-            bg="#0B0D12",
-            height=40,
-            highlightthickness=1,
-            highlightbackground="#273046",
-        )
-        titlebar.pack(fill="x", side="top")
-        titlebar.pack_propagate(False)
+        root = QWidget()
+        self.setCentralWidget(root)
+        main = QVBoxLayout(root)
+        main.setContentsMargins(8, 8, 8, 8)
+        main.setSpacing(6)
 
-        title_text = tk.Label(
-            titlebar,
-            text=self.APP_TITLE,
-            fg="#E9F4FF",
-            bg="#0B0D12",
-            font=("Consolas", 11, "bold"),
-            padx=12,
-        )
-        title_text.pack(side="left")
+        self.outer_shell = QFrame()
+        self.outer_shell.setObjectName("OuterShell")
+        shell_layout = QVBoxLayout(self.outer_shell)
+        shell_layout.setContentsMargins(10, 10, 10, 10)
+        shell_layout.setSpacing(6)
+        main.addWidget(self.outer_shell)
 
-        dev_chip = tk.Label(
-            titlebar,
-            text=f"Built by {self.DEVELOPER_TAG}",
-            fg="#9EF59E",
-            bg="#16201D",
-            font=("Consolas", 9, "bold"),
-            padx=10,
-            pady=2,
-        )
-        dev_chip.pack(side="left", padx=(8, 0), pady=7)
+        title_bar = QFrame()
+        title_bar.setObjectName("TitleBar")
+        title_layout = QHBoxLayout(title_bar)
+        title_layout.setContentsMargins(10, 8, 10, 8)
+        self.title_label = QLabel(self.APP_TITLE)
+        self.dev_label = QLabel(f"Built by {self.DEVELOPER_TAG}")
+        self.dev_label.setStyleSheet("color:#9EF59E; background:#16201D; padding:2px 8px; border-radius:4px;")
+        title_layout.addWidget(self.title_label)
+        title_layout.addWidget(self.dev_label)
+        title_layout.addStretch()
+        min_btn = QPushButton("-")
+        min_btn.setFixedWidth(34)
+        min_btn.clicked.connect(self._minimize_to_tray)
+        close_btn = QPushButton("X")
+        close_btn.setFixedWidth(34)
+        close_btn.clicked.connect(self._on_close)
+        title_layout.addWidget(min_btn)
+        title_layout.addWidget(close_btn)
+        shell_layout.addWidget(title_bar)
+        title_bar.mousePressEvent = self._title_mouse_press
+        title_bar.mouseMoveEvent = self._title_mouse_move
 
-        close_btn = tk.Button(
-            titlebar,
-            text="X",
-            command=self._on_close,
-            font=("Consolas", 10, "bold"),
-            bg="#6F2530",
-            fg="#FFECEF",
-            activebackground="#A33446",
-            activeforeground="#FFFFFF",
-            relief="flat",
-            bd=0,
-            width=3,
-            cursor="hand2",
-        )
-        close_btn.pack(side="right", padx=(0, 2), pady=3)
+        status_row = QFrame()
+        status_layout = QHBoxLayout(status_row)
+        status_layout.setContentsMargins(6, 4, 6, 4)
+        self.status_dot = QLabel("●")
+        self.status_dot.setStyleSheet("font-size:16px; color:#F8D26A;")
+        self.status_text = QLabel("Status: OFF")
+        self.status_mode = QLabel("Idle")
+        self.status_mode.setStyleSheet("background:#1D2333; padding:2px 8px; border-radius:4px;")
+        status_layout.addWidget(self.status_dot)
+        status_layout.addWidget(self.status_text)
+        status_layout.addStretch()
+        status_layout.addWidget(self.status_mode)
+        shell_layout.addWidget(status_row)
 
-        min_btn = tk.Button(
-            titlebar,
-            text="-",
-            command=self._minimize_window,
-            font=("Consolas", 10, "bold"),
-            bg="#22324B",
-            fg="#D8E4FF",
-            activebackground="#345074",
-            activeforeground="#FFFFFF",
-            relief="flat",
-            bd=0,
-            width=3,
-            cursor="hand2",
-        )
-        min_btn.pack(side="right", padx=(0, 6), pady=3)
+        self.tabs = QTabWidget()
+        self.controls_tab = QWidget()
+        self.logs_tab = QWidget()
+        self.settings_tab = QWidget()
+        self.tabs.addTab(self.controls_tab, "Controls")
+        self.tabs.addTab(self.logs_tab, "Debug Log")
+        self.tabs.addTab(self.settings_tab, "Settings")
+        shell_layout.addWidget(self.tabs, 1)
+        self.tabs.currentChanged.connect(self._animate_current_tab)
+        grip_row = QHBoxLayout()
+        grip_row.addStretch()
+        self.resize_grip = QSizeGrip(root)
+        grip_row.addWidget(self.resize_grip)
+        shell_layout.addLayout(grip_row)
 
-        titlebar.bind("<ButtonPress-1>", self._start_window_drag)
-        titlebar.bind("<B1-Motion>", self._on_window_drag)
-        title_text.bind("<ButtonPress-1>", self._start_window_drag)
-        title_text.bind("<B1-Motion>", self._on_window_drag)
+        shadow = QGraphicsDropShadowEffect(self.outer_shell)
+        shadow.setBlurRadius(26)
+        shadow.setColor(Qt.black)
+        shadow.setOffset(0, 6)
+        self.outer_shell.setGraphicsEffect(shadow)
 
-        top = tk.Frame(self.root, bg="#101116")
-        top.pack(fill="x", padx=20, pady=18)
+        self._build_controls_tab()
+        self._build_logs_tab()
+        self._build_settings_tab()
 
-        banner = tk.Frame(
-            top,
-            bg="#141824",
-            height=152,
-            highlightthickness=1,
-            highlightbackground="#2F3750",
-        )
-        banner.pack(fill="x")
-        banner.pack_propagate(False)
+    def _build_controls_tab(self) -> None:
+        panel = QFrame()
+        panel.setObjectName("Panel")
+        wrap = QVBoxLayout(self.controls_tab)
+        wrap.setContentsMargins(0, 0, 0, 0)
+        wrap.addWidget(panel)
+        layout = QVBoxLayout(panel)
 
-        banner_inner = tk.Frame(banner, bg="#141824")
-        banner_inner.pack(fill="both", expand=True, padx=18, pady=16)
+        form = QFormLayout()
+        self.attack_edit = QLineEdit(str(self.config.attack_interval))
+        self.eat_interval_edit = QLineEdit(str(self.config.eat_interval))
+        self.eat_duration_edit = QLineEdit(str(self.config.eat_duration))
+        self.look_away_edit = QLineEdit(str(self.config.look_away_pixels))
+        form.addRow("Attack Interval (sec)", self.attack_edit)
+        form.addRow("Eat Every (sec)", self.eat_interval_edit)
+        form.addRow("Eat Duration (sec)", self.eat_duration_edit)
+        form.addRow("Look Move Units (px)", self.look_away_edit)
+        layout.addLayout(form)
 
-        tk.Label(
-            banner_inner,
-            text=self.APP_TITLE.upper(),
-            fg="#A9F6A9",
-            bg="#141824",
-            font=("Consolas", 22, "bold"),
-        ).pack(anchor="w", pady=(2, 6))
+        self.err_form = QLabel("")
+        self.err_form.setStyleSheet("color:#ff9ca1;")
 
-        tk.Label(
-            banner_inner,
-            text="A cleaner control panel for AFK combat farms",
-            fg="#B4BCD8",
-            bg="#141824",
-            font=("Consolas", 11),
-        ).pack(anchor="w")
+        layout.addWidget(QLabel("Look Direction"))
+        grid = QGridLayout()
+        self.direction_group = QButtonGroup(self)
+        self.direction_group.setExclusive(True)
+        self.direction_buttons = {}
+        for r, row_values in enumerate(self.DIRECTION_GRID):
+            for c, direction in enumerate(row_values):
+                btn = QPushButton(self.DIRECTION_LABELS[direction])
+                btn.setCheckable(True)
+                self.direction_group.addButton(btn)
+                self.direction_buttons[direction] = btn
+                grid.addWidget(btn, r, c)
+        layout.addLayout(grid)
+        self._set_direction(self.config.look_direction)
 
-        info_row = tk.Frame(banner_inner, bg="#141824")
-        info_row.pack(fill="x", pady=(14, 0))
+        hk_row = QHBoxLayout()
+        self.hotkey_edit = QLineEdit(self.config.hotkey)
+        self.hotkey_edit.setReadOnly(True)
+        self.hotkey_capture_btn = QPushButton("Press a key now")
+        self.hotkey_capture_btn.clicked.connect(self._toggle_hotkey_capture)
+        hk_row.addWidget(self.hotkey_edit, 1)
+        hk_row.addWidget(self.hotkey_capture_btn)
+        layout.addWidget(QLabel("Hotkey (supports combos)"))
+        layout.addLayout(hk_row)
+        self.err_hotkey = QLabel("")
+        self.err_hotkey.setStyleSheet("color:#ff9ca1;")
+        layout.addWidget(self.err_hotkey)
+        layout.addWidget(QLabel("Fallback hotkey: F8"))
 
-        self._chip(info_row, "Windows-ready", "#22324B",
-                   "#D8E4FF").pack(side="left")
-        self._chip(info_row, self.DEVELOPER_TAG, "#16201D",
-                   "#9EF59E").pack(side="left", padx=(8, 0))
-        self._chip(info_row, "Press button or hotkey to toggle",
-                   "#1D2333", "#D4DAEE").pack(side="right")
+        self.apply_btn = QPushButton("Apply Settings")
+        self.apply_btn.clicked.connect(self.apply_settings)
+        self.toggle_btn = QPushButton(self._toggle_button_text(False))
+        self.toggle_btn.setStyleSheet("background:#2B6E3E; color:#F3FFF4;")
+        self.toggle_btn.clicked.connect(self.toggle)
+        layout.addWidget(self.apply_btn)
+        layout.addWidget(self.toggle_btn)
+        layout.addStretch()
 
-        status_wrap = tk.Frame(self.root, bg="#101116")
-        status_wrap.pack(fill="x", padx=20, pady=(12, 6))
+    def _build_logs_tab(self) -> None:
+        panel = QFrame()
+        panel.setObjectName("Panel")
+        wrap = QVBoxLayout(self.logs_tab)
+        wrap.setContentsMargins(0, 0, 0, 0)
+        wrap.addWidget(panel)
+        layout = QVBoxLayout(panel)
+        top = QHBoxLayout()
+        top.addWidget(QLabel("Runtime Debug Log"))
+        top.addStretch()
+        clear_btn = QPushButton("Clear")
+        clear_btn.clicked.connect(self._clear_log)
+        top.addWidget(clear_btn)
+        layout.addLayout(top)
+        self.log_box = QTextEdit()
+        self.log_box.setReadOnly(True)
+        layout.addWidget(self.log_box, 1)
 
-        status_bar = tk.Frame(
-            status_wrap,
-            bg="#151A24",
-            highlightthickness=1,
-            highlightbackground="#2B3448",
-        )
-        status_bar.pack(fill="x", padx=14, pady=10)
+    def _build_settings_tab(self) -> None:
+        panel = QFrame()
+        panel.setObjectName("Panel")
+        wrap = QVBoxLayout(self.settings_tab)
+        wrap.setContentsMargins(0, 0, 0, 0)
+        wrap.addWidget(panel)
+        layout = QFormLayout(panel)
+        self.theme_combo = QComboBox()
+        self.theme_combo.addItems(["dark", "light"])
+        self.theme_combo.setCurrentText(self.theme_name if self.theme_name in ("dark", "light") else "dark")
+        self.theme_combo.currentTextChanged.connect(self._apply_theme)
+        self.theme_combo.currentTextChanged.connect(lambda _v: self._animate_settings_feedback())
+        self.startup_anim_check = QCheckBox("Enable startup animation")
+        self.startup_anim_check.setChecked(self.startup_animation)
+        self.startup_anim_check.stateChanged.connect(lambda _v: self._animate_settings_feedback())
+        layout.addRow("Theme", self.theme_combo)
+        layout.addRow("", self.startup_anim_check)
+        layout.addRow("", QLabel("Minimize sends app to tray.\nClose stops clicker immediately."))
 
-        self.status_indicator = tk.Label(
-            status_bar,
-            text="●",
-            fg="#F8D26A",
-            bg="#151A24",
-            font=("Consolas", 13, "bold"),
-        )
-        self.status_indicator.pack(side="left")
+    def _apply_theme(self, theme_name: str) -> None:
+        self.theme_name = "light" if theme_name == "light" else "dark"
+        self.qt_app.setStyleSheet(self.LIGHT_STYLE if self.theme_name == "light" else self.DARK_STYLE)
 
-        tk.Label(
-            status_bar,
-            textvariable=self.status_var,
-            fg="#EAF0FF",
-            bg="#151A24",
-            font=("Consolas", 13, "bold"),
-        ).pack(side="left", padx=(8, 0))
+    def _title_mouse_press(self, event) -> None:
+        if event.button() == Qt.LeftButton:
+            self.drag_origin = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
 
-        self.status_mode = tk.Label(
-            status_bar,
-            text="Idle",
-            fg="#B4BCD8",
-            bg="#1D2333",
-            font=("Consolas", 9, "bold"),
-            padx=10,
-            pady=2,
-        )
-        self.status_mode.pack(side="right")
+    def _title_mouse_move(self, event) -> None:
+        if self.drag_origin and event.buttons() & Qt.LeftButton:
+            self.move(event.globalPosition().toPoint() - self.drag_origin)
 
-        card = tk.Frame(
-            self.root,
-            bg="#171A24",
-            highlightthickness=1,
-            highlightbackground="#2C3348",
-        )
-        card.pack(fill="x", padx=20, pady=(0, 14))
+    def _animate_current_tab(self, _index: int) -> None:
+        page = self.tabs.currentWidget()
+        if page is None:
+            return
+        effect = QGraphicsOpacityEffect(page)
+        page.setGraphicsEffect(effect)
+        anim = QPropertyAnimation(effect, b"opacity", self)
+        anim.setDuration(220)
+        anim.setStartValue(0.15)
+        anim.setEndValue(1.0)
+        anim.setEasingCurve(QEasingCurve.OutCubic)
+        anim.finished.connect(lambda: page.setGraphicsEffect(None))
+        anim.start()
+        self._tab_fade_anim = anim
 
-        self._build_input_row(card, "Attack Interval (sec)", self.attack_var)
-        self._build_input_row(card, "Eat Every (sec)", self.eat_interval_var)
-        self._build_input_row(card, "Eat Duration (sec)",
-                              self.eat_duration_var)
-        self._build_input_row(card, "Look Move Units (px)", self.look_away_var)
-        self._build_direction_picker(card)
-        self._build_input_row(card, "Toggle Key", self.hotkey_var)
+    def _animate_settings_feedback(self) -> None:
+        effect = QGraphicsOpacityEffect(self.settings_tab)
+        self.settings_tab.setGraphicsEffect(effect)
+        anim = QPropertyAnimation(effect, b"opacity", self)
+        anim.setDuration(180)
+        anim.setStartValue(0.8)
+        anim.setEndValue(1.0)
+        anim.setEasingCurve(QEasingCurve.OutQuad)
+        anim.finished.connect(lambda: self.settings_tab.setGraphicsEffect(None))
+        anim.start()
+        self._settings_flash_anim = anim
 
-        hotkey_row = tk.Frame(card, bg="#171A24")
-        hotkey_row.pack(fill="x", pady=(7, 4))
-        tk.Label(
-            hotkey_row,
-            text="Fallback Hotkey",
-            fg="#C8CCDD",
-            bg="#171A24",
-            font=("Consolas", 11, "bold"),
-        ).pack(side="left")
-        tk.Label(
-            hotkey_row,
-            text="F8",
-            fg="#9EF59E",
-            bg="#252A39",
-            font=("Consolas", 12, "bold"),
-            padx=10,
-            pady=3,
-        ).pack(side="right")
+    def _set_direction(self, direction: str) -> None:
+        if direction not in self.direction_buttons:
+            direction = "right"
+        self.direction_buttons[direction].setChecked(True)
 
-        actions = tk.Frame(self.root, bg="#101116")
-        actions.pack(fill="x", padx=20, pady=12)
+    def _get_direction(self) -> str:
+        for direction, button in self.direction_buttons.items():
+            if button.isChecked():
+                return direction
+        return "right"
 
-        self.apply_btn = self._pixel_button(
-            actions, "Apply Settings", self.apply_settings, "#3A4260")
-        self.apply_btn.pack(side="left", padx=(0, 10))
-
-        self.toggle_btn = self._pixel_button(
-            actions, self._toggle_button_text(False), self.toggle, "#2B6E3E")
-        self.toggle_btn.pack(side="left")
-
-        log_wrap = tk.Frame(
-            self.root,
-            bg="#151823",
-            highlightthickness=1,
-            highlightbackground="#2C3348",
-        )
-        log_wrap.pack(fill="both", expand=True, padx=20, pady=(2, 18))
-
-        tk.Label(
-            log_wrap,
-            text="Runtime Log",
-            fg="#B4BADE",
-            bg="#151823",
-            anchor="w",
-            padx=10,
-            pady=6,
-            font=("Consolas", 11, "bold"),
-        ).pack(fill="x")
-
-        self.log_box = tk.Text(
-            log_wrap,
-            height=10,
-            bg="#0D0F15",
-            fg="#9BEA9B",
-            insertbackground="#9BEA9B",
-            font=("Consolas", 10),
-            bd=0,
-            padx=10,
-            pady=8,
-        )
-        self.log_box.pack(fill="both", expand=True)
-        self.log_box.configure(state="disabled")
-
-        footer_row = tk.Frame(self.root, bg="#101116")
-        footer_row.pack(fill="x", padx=20, pady=(0, 12))
-        footer_divider = tk.Frame(footer_row, bg="#23293A", height=1)
-        footer_divider.pack(fill="x", pady=(0, 10))
-
-        footer_content = tk.Frame(footer_row, bg="#101116")
-        footer_content.pack(fill="x")
-
-        tk.Label(
-            footer_content,
-            text="Farm Control launcher",
-            fg="#7D85A8",
-            bg="#101116",
-            font=("Consolas", 10, "bold"),
-        ).pack(side="left")
-
-        self._chip(footer_content, f"Built by {self.DEVELOPER_TAG}", "#16201D", "#9EF59E").pack(
-            side="right")
-
-        self._append_log(f"Press {self._hotkey_hint()} to start/stop")
-        self._apply_status_ui(False)
-
-    def _build_input_row(self, parent, label: str, var: tk.StringVar) -> None:
-        row = tk.Frame(parent, bg="#171A24")
-        row.pack(fill="x", pady=5)
-
-        tk.Label(
-            row,
-            text=label,
-            fg="#C8CCDD",
-            bg="#171A24",
-            font=("Consolas", 11, "bold"),
-        ).pack(side="left")
-
-        entry = tk.Entry(
-            row,
-            textvariable=var,
-            width=10,
-            bg="#252A39",
-            fg="#E8EAF2",
-            insertbackground="#E8EAF2",
-            relief="flat",
-            font=("Consolas", 11),
-            justify="center",
-        )
-        entry.pack(side="right")
-
-    def _chip(self, parent, text: str, bg: str, fg: str) -> tk.Label:
-        return tk.Label(
-            parent,
-            text=text,
-            fg=fg,
-            bg=bg,
-            font=("Consolas", 9, "bold"),
-            padx=10,
-            pady=3,
-        )
-
-    def _build_direction_picker(self, parent) -> None:
-        outer = tk.Frame(parent, bg="#171A24")
-        outer.pack(fill="x", pady=(8, 6))
-
-        tk.Label(
-            outer,
-            text="Look Direction While Eating",
-            fg="#C8CCDD",
-            bg="#171A24",
-            font=("Consolas", 11, "bold"),
-        ).pack(anchor="w", pady=(0, 6))
-
-        grid = tk.Frame(
-            outer,
-            bg="#1A1E2A",
-            highlightthickness=1,
-            highlightbackground="#2C3348",
-        )
-        grid.pack(anchor="w", padx=8, pady=8)
-
-        for row_index, row_values in enumerate(self.DIRECTION_GRID):
-            for col_index, direction in enumerate(row_values):
-                rb = tk.Radiobutton(
-                    grid,
-                    text=self.DIRECTION_LABELS[direction],
-                    value=direction,
-                    variable=self.look_direction_var,
-                    indicatoron=False,
-                    width=4,
-                    height=1,
-                    command=self._on_direction_selected,
-                    bg="#252A39",
-                    fg="#E8EAF2",
-                    selectcolor="#2B6E3E",
-                    activebackground="#3A4260",
-                    activeforeground="#FFFFFF",
-                    relief="flat",
-                    bd=0,
-                    font=("Consolas", 11, "bold"),
-                    cursor="hand2",
-                )
-                rb.grid(row=row_index, column=col_index, padx=4, pady=4)
-
-        if self.look_direction_var.get() not in self.DIRECTION_LABELS:
-            self.look_direction_var.set("right")
-
-    def _on_direction_selected(self) -> None:
-        direction = self.look_direction_var.get()
-        self._append_log(f"Look direction: {direction}")
-
-    def _validate_direction(self, raw_value: str) -> str:
-        value = raw_value.strip().lower()
-        if value in self.DIRECTION_LABELS:
-            return value
-        raise ValueError("Invalid look direction selected")
-
-    def _pixel_button(self, parent, text, command, bg_color):
-        button = tk.Button(
-            parent,
-            text=text,
-            command=command,
-            font=("Consolas", 11, "bold"),
-            bg=bg_color,
-            fg="#EAF0FF",
-            activebackground="#4C5A84",
-            activeforeground="#FFFFFF",
-            relief="flat",
-            bd=0,
-            padx=16,
-            pady=9,
-            cursor="hand2",
-        )
-        hover_bg = "#4C5A84" if bg_color != "#2B6E3E" else "#3D8753"
-        normal_bg = bg_color
-        button.bind("<Enter>", lambda _e: button.configure(bg=hover_bg))
-        button.bind("<Leave>", lambda _e: button.configure(bg=normal_bg))
-        return button
+    def _toggle_hotkey_capture(self) -> None:
+        self.capture_mode = not self.capture_mode
+        self.hotkey_capture_btn.setText("Listening..." if self.capture_mode else "Press a key now")
+        self.err_hotkey.setText("Press desired key/combo" if self.capture_mode else "")
 
     def _start_hotkey_listener(self) -> None:
         def on_press(key):
             try:
-                is_main_hotkey = self._matches_configured_hotkey(key)
-                is_fallback_hotkey = key == self.FALLBACK_HOTKEY
-                if is_main_hotkey or is_fallback_hotkey:
-                    now = time.monotonic()
-                    if now - self.last_hotkey_time < 0.3:
-                        return
+                mod = self.MODIFIER_KEYS.get(key)
+                if mod:
+                    self.pressed_modifiers.add(mod)
+                    return
+                if self.capture_mode:
+                    combo = self._format_combo(key)
+                    if combo:
+                        self.hotkey_edit.setText(combo)
+                        self.capture_mode = False
+                        self.hotkey_capture_btn.setText("Press a key now")
+                        self.err_hotkey.setText("")
+                    return
+                now = time.monotonic()
+                if now - self.last_hotkey_time < 0.25:
+                    return
+                if key == self.FALLBACK_HOTKEY or self._matches_configured_hotkey(key):
                     self.last_hotkey_time = now
-                    self.root.after(0, self.toggle)
+                    self.bridge.toggle_request.emit()
             except Exception:
                 logging.exception("Hotkey listener error")
 
-        self.listener = keyboard.Listener(on_press=on_press)
+        def on_release(key):
+            mod = self.MODIFIER_KEYS.get(key)
+            if mod and mod in self.pressed_modifiers:
+                self.pressed_modifiers.remove(mod)
+
+        self.listener = keyboard.Listener(on_press=on_press, on_release=on_release)
         self.listener.start()
 
+    def _format_combo(self, key) -> str:
+        mods = [m for m in ("ctrl", "alt", "shift") if m in self.pressed_modifiers]
+        main = self._extract_main_key_name(key)
+        if not main:
+            return ""
+        return "+".join(mods + [main]) if mods else main
+
+    def _extract_main_key_name(self, key) -> str:
+        if hasattr(key, "char") and key.char:
+            ch = key.char
+            # Ctrl+letter combos often arrive as control characters (1..26).
+            if len(ch) == 1 and ord(ch) < 32:
+                letter_index = ord(ch)
+                if 1 <= letter_index <= 26:
+                    return chr(ord("a") + letter_index - 1)
+            return ch.lower()
+        special_name = next((name for name, special in self.SPECIAL_HOTKEYS.items() if key == special), "")
+        if special_name:
+            return special_name
+        vk = getattr(key, "vk", None)
+        if vk in self.VK_MAIN_KEYS:
+            return self.VK_MAIN_KEYS[vk]
+        return ""
+
     def _matches_configured_hotkey(self, key) -> bool:
-        hotkey = self.config.hotkey.strip()
-        if not hotkey:
+        text = self.hotkey_edit.text().strip().lower()
+        if not text:
             return False
+        tokens = [token for token in text.split("+") if token]
+        main = tokens[-1]
+        mods = set(tokens[:-1])
+        if not mods.issubset(self.pressed_modifiers):
+            return False
+        if main in self.SPECIAL_HOTKEYS:
+            return key == self.SPECIAL_HOTKEYS[main]
+        resolved = self._extract_main_key_name(key)
+        return bool(resolved) and resolved == main
 
-        normalized = hotkey.lower()
-        if normalized in self.SPECIAL_HOTKEYS:
-            return key == self.SPECIAL_HOTKEYS[normalized]
-
-        return hasattr(key, "char") and key.char is not None and key.char.lower() == hotkey.lower()
-
-    def _validate_hotkey(self, raw_value: str) -> str:
-        value = raw_value.strip()
+    def _validate_hotkey(self, text: str) -> str:
+        value = text.strip().lower()
         if not value:
-            raise ValueError("Toggle key cannot be empty")
-
-        if len(value) == 1:
+            raise ValueError("Hotkey cannot be empty")
+        tokens = [t for t in value.split("+") if t]
+        if not tokens:
+            raise ValueError("Hotkey is invalid")
+        for mod in tokens[:-1]:
+            if mod not in ("ctrl", "alt", "shift"):
+                raise ValueError("Modifiers must be ctrl/alt/shift")
+        main = tokens[-1]
+        if len(main) == 1 or main in self.SPECIAL_HOTKEYS:
             return value
+        raise ValueError("Main key is invalid")
 
-        normalized = value.lower()
-        if normalized in self.SPECIAL_HOTKEYS:
-            return normalized
+    def _validate_float(self, widget: QLineEdit, name: str, min_value: float) -> float:
+        try:
+            value = float(widget.text().strip())
+        except Exception:
+            raise ValueError(f"{name} must be numeric")
+        if value <= min_value:
+            raise ValueError(f"{name} must be greater than {min_value}")
+        return value
 
-        allowed = "single character or one of: f1-f12, esc, tab, space, enter, caps_lock"
-        raise ValueError(f"Invalid toggle key. Use {allowed}")
+    def _validate_non_negative_int(self, widget: QLineEdit, name: str) -> int:
+        try:
+            value = int(float(widget.text().strip()))
+        except Exception:
+            raise ValueError(f"{name} must be numeric")
+        if value < 0:
+            raise ValueError(f"{name} must be >= 0")
+        return value
 
-    def _hotkey_hint(self) -> str:
-        key_text = self.config.hotkey
-        return f"{key_text} or F8"
-
-    def _toggle_button_text(self, running: bool) -> str:
-        base = f"Toggle  [{self._hotkey_hint()}]"
-        if running:
-            return f"{base}  (ON)"
-        return base
-
-    def _apply_status_ui(self, running: bool) -> None:
-        if running:
-            self.status_var.set("Status: ON")
-            self.status_indicator.configure(fg="#89F28B")
-            self.status_mode.configure(
-                text="Active", bg="#23402A", fg="#A7FFAD")
-            self._start_status_pulse()
-        else:
-            self.status_var.set("Status: OFF")
-            self.status_indicator.configure(fg="#F8D26A")
-            self.status_mode.configure(text="Idle", bg="#1D2333", fg="#B4BCD8")
-            self._stop_status_pulse()
-
-    def _start_status_pulse(self) -> None:
-        self._stop_status_pulse()
-
-        def pulse() -> None:
-            if self.clicker.running:
-                self._status_pulse_on = not self._status_pulse_on
-                color = "#89F28B" if self._status_pulse_on else "#53C85A"
-                self.status_indicator.configure(fg=color)
-                self._status_pulse_job = self.root.after(450, pulse)
-
-        self._status_pulse_on = False
-        self._status_pulse_job = self.root.after(250, pulse)
-
-    def _stop_status_pulse(self) -> None:
-        if self._status_pulse_job is not None:
-            try:
-                self.root.after_cancel(self._status_pulse_job)
-            except Exception:
-                pass
-            self._status_pulse_job = None
-        self._status_pulse_on = False
-
-    def _start_window_drag(self, event) -> None:
-        self.drag_offset_x = event.x_root - self.root.winfo_x()
-        self.drag_offset_y = event.y_root - self.root.winfo_y()
-
-    def _on_window_drag(self, event) -> None:
-        x = event.x_root - self.drag_offset_x
-        y = event.y_root - self.drag_offset_y
-        self.root.geometry(f"+{x}+{y}")
-
-    def _minimize_window(self) -> None:
-        if self.root.state() == "iconic":
-            return
-
-        self._minimize_restore_pending = True
-        self.root.overrideredirect(False)
-        self.root.update_idletasks()
-        self.root.iconify()
-        self.root.after(250, self._restore_borderless_after_minimize)
-
-    def _restore_borderless_after_minimize(self) -> None:
-        if self.root.state() != "iconic" and self._minimize_restore_pending:
-            self.root.overrideredirect(True)
-            self._ensure_taskbar_presence()
-            self._minimize_restore_pending = False
-
-    def _ensure_taskbar_presence(self) -> None:
-        if self._taskbar_style_initialized:
-            return
-
-        if hasattr(ctypes, "windll"):
-            try:
-                hwnd = ctypes.windll.user32.GetParent(self.root.winfo_id())
-                ex_style = ctypes.windll.user32.GetWindowLongW(
-                    hwnd, self.GWL_EXSTYLE)
-                ex_style = (
-                    ex_style & ~self.WS_EX_TOOLWINDOW) | self.WS_EX_APPWINDOW
-                ctypes.windll.user32.SetWindowLongW(
-                    hwnd, self.GWL_EXSTYLE, ex_style)
-                ctypes.windll.user32.SetWindowPos(
-                    hwnd,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    self.SWP_NOMOVE | self.SWP_NOSIZE | self.SWP_NOZORDER | self.SWP_FRAMECHANGED,
-                )
-
-                self.root.withdraw()
-                self.root.after(20, self.root.deiconify)
-            except Exception:
-                logging.exception("Taskbar style setup failed")
-
-        self._taskbar_style_initialized = True
-
-    def _on_map(self, _event) -> None:
-        if self.root.state() != "iconic":
-            self.root.after(10, lambda: self.root.overrideredirect(True))
-            self.root.after(20, self._ensure_taskbar_presence)
-            self._minimize_restore_pending = False
-
-    def _on_unmap(self, _event) -> None:
-        if self.root.state() == "iconic":
-            self._minimize_restore_pending = True
-
-    def _on_focus_in(self, _event) -> None:
-        if self.root.state() != "iconic" and not self.root.overrideredirect():
-            self.root.overrideredirect(True)
-
-    def _append_log(self, text: str) -> None:
-        stamp = time.strftime("%H:%M:%S")
-        line = f"[{stamp}] {text}\n"
-
-        def write_line():
-            self.log_box.configure(state="normal")
-            self.log_box.insert("end", line)
-            self.log_box.see("end")
-            self.log_box.configure(state="disabled")
-
-        self.root.after(0, write_line)
+    def _clear_validation_errors(self) -> None:
+        self.err_form.setText("")
+        self.err_hotkey.setText("")
 
     def _parse_config_from_ui(self) -> ClickerConfig:
+        self._clear_validation_errors()
+        has_error = False
+        try:
+            attack = self._validate_float(self.attack_edit, "Attack interval", 0.0)
+        except ValueError as exc:
+            self.err_form.setText(str(exc))
+            has_error = True
+            attack = self.config.attack_interval
+        try:
+            eat_interval = self._validate_float(self.eat_interval_edit, "Eat interval", 0.0)
+        except ValueError as exc:
+            self.err_form.setText(str(exc))
+            has_error = True
+            eat_interval = self.config.eat_interval
+        try:
+            eat_duration = self._validate_float(self.eat_duration_edit, "Eat duration", 0.0)
+        except ValueError as exc:
+            self.err_form.setText(str(exc))
+            has_error = True
+            eat_duration = self.config.eat_duration
+        try:
+            look_away = self._validate_non_negative_int(self.look_away_edit, "Look move units")
+        except ValueError as exc:
+            self.err_form.setText(str(exc))
+            has_error = True
+            look_away = self.config.look_away_pixels
+        try:
+            hotkey = self._validate_hotkey(self.hotkey_edit.text())
+        except ValueError as exc:
+            self.err_hotkey.setText(str(exc))
+            has_error = True
+            hotkey = self.config.hotkey
+        if has_error:
+            raise ValueError("Please fix highlighted fields")
+
         cfg = ClickerConfig(
-            attack_interval=float(self.attack_var.get().strip()),
-            eat_interval=float(self.eat_interval_var.get().strip()),
-            eat_duration=float(self.eat_duration_var.get().strip()),
-            look_away_pixels=int(float(self.look_away_var.get().strip())),
+            attack_interval=attack,
+            eat_interval=eat_interval,
+            eat_duration=eat_duration,
+            look_away_pixels=look_away,
             look_away_settle_time=self.config.look_away_settle_time,
-            look_direction=self._validate_direction(
-                self.look_direction_var.get()),
-            hotkey=self._validate_hotkey(self.hotkey_var.get()),
+            look_direction=self._get_direction(),
+            hotkey=hotkey,
+            theme=self.theme_name,
+            startup_animation=self.startup_anim_check.isChecked(),
         )
-
-        if cfg.attack_interval <= 0:
-            raise ValueError("Attack interval must be greater than 0")
-        if cfg.eat_interval <= 0:
-            raise ValueError("Eat interval must be greater than 0")
-        if cfg.eat_duration <= 0:
-            raise ValueError("Eat duration must be greater than 0")
-        if cfg.look_away_pixels < 0:
-            raise ValueError("Look move units must be 0 or greater")
-
         return cfg
 
     def apply_settings(self, show_error: bool = True, write_log: bool = True) -> bool:
         try:
             self.config = self._parse_config_from_ui()
-            self.hotkey_var.set(self.config.hotkey)
             self.clicker.update_config(self.config)
             self.config_manager.save(self.config)
-            self.toggle_btn.configure(
-                text=self._toggle_button_text(self.clicker.running))
+            self.toggle_btn.setText(self._toggle_button_text(self.clicker.running))
+            self._animate_settings_feedback()
             if write_log:
-                self._append_log("Settings applied")
+                self._queue_log("Settings applied")
             return True
         except ValueError as exc:
             if show_error:
-                messagebox.showerror("Invalid Input", str(exc))
+                QMessageBox.warning(self, "Invalid Input", str(exc))
             return False
+        except Exception as exc:
+            logging.exception("Failed to apply settings")
+            if show_error:
+                QMessageBox.critical(self, "Apply Settings Failed", str(exc))
+            return False
+
+    def _toggle_button_text(self, running: bool) -> str:
+        base = f"Start / Stop  [{self.hotkey_edit.text()} or F8]"
+        return f"{base}  (ON)" if running else base
 
     def toggle(self) -> None:
         if not self.apply_settings(show_error=True, write_log=False):
             return
-
         is_on = self.clicker.toggle()
-        if is_on:
-            self.toggle_btn.configure(
-                bg="#7A2B2B", text=self._toggle_button_text(True))
-        else:
-            self.toggle_btn.configure(
-                bg="#2B6E3E", text=self._toggle_button_text(False))
+        self.toggle_btn.setText(self._toggle_button_text(is_on))
+        self.toggle_btn.setStyleSheet("background:#7A2B2B; color:#F3FFF4;" if is_on else "background:#2B6E3E; color:#F3FFF4;")
         self._apply_status_ui(is_on)
+
+    def _apply_status_ui(self, running: bool) -> None:
+        if running:
+            self.status_text.setText("Status: ON")
+            self.status_dot.setStyleSheet("font-size:16px; color:#89F28B;")
+            self.status_mode.setText("Active")
+            self.status_mode.setStyleSheet("background:#23402A; color:#A7FFAD; padding:2px 8px; border-radius:4px;")
+        else:
+            self.status_text.setText("Status: OFF")
+            self.status_dot.setStyleSheet("font-size:16px; color:#F8D26A;")
+            self.status_mode.setText("Idle")
+            self.status_mode.setStyleSheet("background:#1D2333; color:#B4BCD8; padding:2px 8px; border-radius:4px;")
+
+    def _play_startup_animation(self) -> None:
+        self.setWindowOpacity(0.0)
+        self.anim = QPropertyAnimation(self, b"windowOpacity")
+        self.anim.setDuration(320)
+        self.anim.setStartValue(0.0)
+        self.anim.setEndValue(1.0)
+        self.anim.start()
+
+    def _show_onboarding(self) -> None:
+        QMessageBox.information(
+            self,
+            "Welcome",
+            "Quick setup:\n"
+            "1) Put sword in main hand.\n"
+            "2) Put food in off hand.\n"
+            "3) Configure intervals and hotkey.\n"
+            "4) Press Start / Stop.",
+        )
+
+    def _queue_log(self, text: str) -> None:
+        self.bridge.log_message.emit(text)
+
+    def _append_log_ui(self, text: str) -> None:
+        stamp = time.strftime("%H:%M:%S")
+        self.log_box.append(f"[{stamp}] {text}")
+
+    def _clear_log(self) -> None:
+        self.log_box.clear()
+        self._queue_log("Log cleared")
+
+    def _create_tray_icon(self) -> None:
+        if self.tray_icon is not None:
+            return
+        icon = self.windowIcon()
+        self.tray_icon = QSystemTrayIcon(icon, self)
+        menu = QMenu()
+        restore_action = QAction("Restore", self)
+        restore_action.triggered.connect(self._restore_from_tray)
+        quit_action = QAction("Quit", self)
+        quit_action.triggered.connect(self._on_close)
+        menu.addAction(restore_action)
+        menu.addAction(quit_action)
+        self.tray_icon.setContextMenu(menu)
+        self.tray_icon.activated.connect(lambda reason: self._restore_from_tray() if reason == QSystemTrayIcon.Trigger else None)
+        self.tray_icon.show()
+
+    def _minimize_to_tray(self) -> None:
+        self._create_tray_icon()
+        self.hide()
+
+    def _restore_from_tray(self) -> None:
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
 
     def _on_close(self) -> None:
         self.clicker.stop()
-        if hasattr(self, "listener"):
+        if self.listener is not None:
             self.listener.stop()
-        self.root.destroy()
+        if self.tray_icon is not None:
+            self.tray_icon.hide()
+        self.close()
+
+    def closeEvent(self, event) -> None:
+        self.clicker.stop()
+        if self.listener is not None:
+            self.listener.stop()
+        if self.tray_icon is not None:
+            self.tray_icon.hide()
+        event.accept()
 
     def run(self) -> None:
-        self.root.mainloop()
+        self.qt_app.exec()

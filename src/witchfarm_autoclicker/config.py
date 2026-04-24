@@ -14,6 +14,8 @@ class ClickerConfig:
     look_away_settle_time: float = 0.15
     look_direction: str = "right"
     hotkey: str = "\\"
+    theme: str = "dark"
+    startup_animation: bool = True
 
 
 class ConfigManager:
@@ -43,12 +45,16 @@ class ConfigManager:
         cfg.look_direction = self._coerce_str(
             data.get("look_direction"), cfg.look_direction)
         cfg.hotkey = self._coerce_str(data.get("hotkey"), cfg.hotkey)
+        cfg.theme = self._coerce_str(data.get("theme"), cfg.theme)
+        cfg.startup_animation = self._coerce_bool(
+            data.get("startup_animation"), cfg.startup_animation)
         return cfg
 
     def save(self, cfg: ClickerConfig) -> None:
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
-        self.config_path.write_text(json.dumps(
-            asdict(cfg), indent=2), encoding="utf-8")
+        tmp_path = self.config_path.with_suffix(".json.tmp")
+        tmp_path.write_text(json.dumps(asdict(cfg), indent=2), encoding="utf-8")
+        tmp_path.replace(self.config_path)
 
     @staticmethod
     def _coerce_float(value, fallback: float) -> float:
@@ -63,4 +69,10 @@ class ConfigManager:
             value = value.strip()
             if value:
                 return value
+        return fallback
+
+    @staticmethod
+    def _coerce_bool(value, fallback: bool) -> bool:
+        if isinstance(value, bool):
+            return value
         return fallback

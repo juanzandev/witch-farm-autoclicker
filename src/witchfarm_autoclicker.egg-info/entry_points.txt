@@ -1,0 +1,2 @@
+[console_scripts]
+witchfarm-autoclicker = witchfarm_autoclicker.main:main

@@ -62,11 +62,19 @@ class WitchFarmClicker:
         return True
 
     def stop(self) -> bool:
+        worker = None
         with self._lock:
             if not self._running:
                 return False
             self._running = False
             self._stop_event.set()
+            worker = self._worker
+
+        if worker is not None and worker.is_alive():
+            worker.join(timeout=1.0)
+
+        with self._lock:
+            self._worker = None
 
         self._log("Autoclicker disabled")
         return True
@@ -83,8 +91,10 @@ class WitchFarmClicker:
 
     def _left_click_once(self) -> None:
         self.mouse.press(Button.left)
-        self._sleep_interruptible(0.015)
-        self.mouse.release(Button.left)
+        try:
+            self._sleep_interruptible(0.015)
+        finally:
+            self.mouse.release(Button.left)
 
     def _eat_cycle(self, cfg: ClickerConfig) -> None:
         direction = cfg.look_direction.strip().lower()
@@ -116,17 +126,26 @@ class WitchFarmClicker:
     def _loop(self) -> None:
         next_eat = time.monotonic() + self.config.eat_interval
 
-        while not self._stop_event.is_set():
-            cfg = self.config
-            now = time.monotonic()
+        try:
+            while not self._stop_event.is_set():
+                cfg = self.config
+                now = time.monotonic()
 
-            if now >= next_eat:
-                self._eat_cycle(cfg)
-                next_eat = time.monotonic() + cfg.eat_interval
-                continue
+                if now >= next_eat:
+                    self._eat_cycle(cfg)
+                    next_eat = time.monotonic() + cfg.eat_interval
+                    continue
 
-            self._left_click_once()
-            self._sleep_interruptible(cfg.attack_interval)
+                self._left_click_once()
+                self._sleep_interruptible(cfg.attack_interval)
+        except Exception as exc:
+            logging.exception("Autoclicker worker crashed")
+            self._log(f"Autoclicker stopped due to error: {exc}")
+        finally:
+            with self._lock:
+                self._running = False
+                self._stop_event.set()
+                self._worker = None
 
     def _log(self, message: str) -> None:
         logging.info(message)

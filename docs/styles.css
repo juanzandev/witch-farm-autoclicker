@@ -86,6 +86,45 @@ main {
     padding: 30px 18px 80px;
 }
 
+.tab-switcher {
+    display: inline-flex;
+    gap: 8px;
+    margin: 8px 0 16px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(16, 21, 34, 0.72);
+}
+
+.tab-btn {
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 9px 14px;
+    color: var(--muted);
+    background: transparent;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.tab-btn:hover {
+    color: var(--text);
+    border-color: #354466;
+}
+
+.tab-btn.is-active {
+    color: #05210f;
+    border-color: #4ade80;
+    background: linear-gradient(90deg, #4ade80, #22c55e);
+}
+
+.tab-panel {
+    display: none;
+}
+
+.tab-panel.is-active {
+    display: block;
+}
+
 .hero {
     text-align: center;
     padding: 52px 14px;
@@ -258,6 +297,97 @@ h1 {
     margin-bottom: 8px;
 }
 
+.changelog-panel {
+    margin-top: 8px;
+}
+
+.changelog-head h2 {
+    margin-top: 0;
+}
+
+.changelog-list {
+    margin-top: 12px;
+    display: grid;
+    gap: 12px;
+}
+
+.change-entry {
+    border: 1px solid #324163;
+    border-radius: 14px;
+    padding: 14px;
+    background: linear-gradient(180deg, rgba(28, 37, 59, 0.88), rgba(19, 27, 44, 0.9));
+}
+
+.change-entry-header {
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.version-tag {
+    color: #092513;
+    background: #83f2a8;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.change-date {
+    color: #9fb0d4;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.change-title {
+    margin: 12px 0 8px;
+    font-size: 16px;
+}
+
+.change-notes {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--text);
+}
+
+.change-notes li {
+    margin-bottom: 8px;
+}
+
+.pushes-wrap {
+    margin-top: 18px;
+    border-top: 1px solid #2f3d5f;
+    padding-top: 14px;
+}
+
+.pushes-title {
+    margin: 0 0 10px;
+    font-size: 14px;
+}
+
+.push-feed {
+    display: grid;
+    gap: 10px;
+}
+
+.push-item {
+    border: 1px solid #2f3d5f;
+    border-radius: 12px;
+    padding: 10px 12px;
+    background: rgba(18, 25, 39, 0.82);
+}
+
+.push-meta {
+    color: #9fb0d4;
+    font-size: 12px;
+}
+
+.push-item p {
+    margin: 7px 0 0;
+}
+
 .table-wrap {
     overflow-x: auto;
 }
@@ -337,5 +467,13 @@ footer {
     .preview-panel {
         grid-template-columns: 1fr;
         padding: 16px;
+    }
+
+    .tab-switcher {
+        width: 100%;
+    }
+
+    .tab-btn {
+        flex: 1;
     }
 }

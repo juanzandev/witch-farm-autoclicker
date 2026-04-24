@@ -49,11 +49,39 @@ if errorlevel 1 (
 
 if not exist docs\downloads mkdir docs\downloads
 
-copy /Y dist\WitchFarmAutoClicker_latest.exe docs\downloads\WitchFarmAutoClicker_latest.exe >nul
-copy /Y dist\WitchFarmAutoClickerSetup_latest.exe docs\downloads\WitchFarmAutoClickerSetup_latest.exe >nul
-
-for %%F in (WitchFarmAutoClicker_latest.exe WitchFarmAutoClickerSetup_latest.exe) do (
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "(Get-FileHash -Algorithm SHA256 'docs/downloads/%%F').Hash.ToLower()" > "docs/downloads/%%F.sha256"
+echo Publishing release artifacts to docs\downloads...
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$ErrorActionPreference = 'Stop';" ^
+  "$pairs = @(" ^
+  "  @{ Source = 'dist\WitchFarmAutoClicker_latest.exe'; Target = 'docs\downloads\WitchFarmAutoClicker_latest.exe' }," ^
+  "  @{ Source = 'dist\WitchFarmAutoClickerSetup_latest.exe'; Target = 'docs\downloads\WitchFarmAutoClickerSetup_latest.exe' }" ^
+  ");" ^
+  "foreach ($pair in $pairs) {" ^
+  "  if (-not (Test-Path $pair.Source)) { throw \"Missing built artifact: $($pair.Source)\" }" ^
+  "  $targetDir = Split-Path -Parent $pair.Target;" ^
+  "  if (-not (Test-Path $targetDir)) { New-Item -ItemType Directory -Path $targetDir | Out-Null }" ^
+  "  $tmp = \"$($pair.Target).new\";" ^
+  "  $published = $false;" ^
+  "  for ($i = 1; $i -le 8; $i++) {" ^
+  "    try {" ^
+  "      Copy-Item -LiteralPath $pair.Source -Destination $tmp -Force;" ^
+  "      Move-Item -LiteralPath $tmp -Destination $pair.Target -Force;" ^
+  "      $published = $true;" ^
+  "      break;" ^
+  "    } catch {" ^
+  "      if (Test-Path $tmp) { Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue }" ^
+  "      Start-Sleep -Milliseconds (250 * $i);" ^
+  "    }" ^
+  "  }" ^
+  "  if (-not $published) { throw \"Unable to publish artifact after retries: $($pair.Target). Close any app/process using this file and rerun build_release.bat.\" }" ^
+  "  $srcHash = (Get-FileHash -Algorithm SHA256 $pair.Source).Hash.ToLower();" ^
+  "  $dstHash = (Get-FileHash -Algorithm SHA256 $pair.Target).Hash.ToLower();" ^
+  "  if ($srcHash -ne $dstHash) { throw \"Hash mismatch after publish: $($pair.Target)\" }" ^
+  "  Set-Content -Path ($pair.Target + '.sha256') -Value $dstHash -NoNewline;" ^
+  "}"
+if errorlevel 1 (
+  echo Failed to publish verified release artifacts.
+  exit /b 1
 )
 
 echo.
